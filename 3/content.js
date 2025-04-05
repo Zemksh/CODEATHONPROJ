@@ -1,424 +1,234 @@
-// Payment Timer Extension - Content Script with improved debugging
-console.log("Payment Timer Extension content script loaded");
-
-// Default configuration (fallback if storage access fails)
-const DEFAULT_CONFIG = {
-  restrictedVendors: ["amazon", "flipkart", "shopping", "checkout", "pay", "upi"],
-  waitTime: 15
-};
-
-// Track if we're on a payment page
-let isPaymentPage = false;
-let config = DEFAULT_CONFIG;
-
-// Load configuration from storage
-function loadConfiguration() {
-  try {
-    chrome.storage.local.get(['restrictedVendors', 'waitTime'], function(data) {
-      if (data.restrictedVendors) {
-        config.restrictedVendors = data.restrictedVendors;
-        console.log("Loaded restricted vendors:", config.restrictedVendors);
-      }
-      
-      if (data.waitTime) {
-        config.waitTime = data.waitTime;
-        console.log("Loaded wait time:", config.waitTime);
-      }
-      
-      // After loading config, scan the page
-      scanPage();
-    });
-  } catch (error) {
-    console.error("Failed to load configuration, using defaults:", error);
-    scanPage();
-  }
-}
-
-// Scan the page for payment indicators
-function scanPage() {
-  // Check if the URL suggests a payment page
-  const url = window.location.href.toLowerCase();
-  const urlIndicators = ['checkout', 'payment', 'pay', 'cart', 'order'];
+// Function to create and insert the confirmation modal
+function createConfirmationModal(vendorUPI, timer, onProceed, onCancel) {
+  // Create modal container
+  const modal = document.createElement('div');
+  modal.id = 'budget-buddy-modal';
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.backgroundColor = 'rgba(0,0,0,0.7)';
+  modal.style.zIndex = '10000';
+  modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
   
-  if (urlIndicators.some(indicator => url.includes(indicator))) {
-    console.log("URL suggests payment page");
-    isPaymentPage = true;
-  }
+  // Create modal content
+  const modalContent = document.createElement('div');
+  modalContent.style.backgroundColor = 'white';
+  modalContent.style.padding = '20px';
+  modalContent.style.borderRadius = '5px';
+  modalContent.style.maxWidth = '400px';
+  modalContent.style.width = '80%';
   
-  // Check page content for payment indicators
-  const pageContent = document.body.innerText.toLowerCase();
-  const contentIndicators = ['payment', 'credit card', 'debit card', 'checkout', 'pay now', 'upi'];
-  
-  if (contentIndicators.some(indicator => pageContent.includes(indicator))) {
-    console.log("Page content suggests payment functionality");
-    isPaymentPage = true;
-  }
-  
-  // Check for vendor restrictions
-  const currentDomain = window.location.hostname.toLowerCase();
-  console.log("Current domain:", currentDomain);
-  
-  // Look for UPI IDs on the page
-  const upiElements = document.querySelectorAll("[id*='upi'], [name*='upi'], [id*='vpa'], [name*='vpa']");
-  if (upiElements.length > 0) {
-    console.log("Found potential UPI elements:", upiElements.length);
-    isPaymentPage = true;
-  }
-  
-  // After scanning, find and attach to payment buttons
-  findPaymentButtons();
-}
-
-// Find payment buttons - more aggressive version
-function findPaymentButtons() {
-  console.log("Searching for payment buttons...");
-  
-  // Common payment button selectors - expanded list
-  const buttonSelectors = [
-    "#payButton", 
-    "button[type='submit']",
-    "input[type='submit']",
-    ".payment-button",
-    ".pay-button",
-    "[aria-label*='pay']",
-    "[data-testid*='pay']",
-    "button:contains('Pay')",
-    "button:contains('Checkout')",
-    "button:contains('Buy')",
-    "a:contains('Pay')",
-    "a:contains('Checkout')",
-    "a:contains('Buy')",
-    "form button",
-    "form input[type='submit']"
-  ];
-  
-  // Create a combined selector
-  const combinedSelector = buttonSelectors.join(", ");
-  
-  try {
-    // First try querySelector with combined selector
-    const buttons = document.querySelectorAll(combinedSelector);
-    console.log(`Found ${buttons.length} potential payment buttons with combined selector`);
-    
-    buttons.forEach((button, index) => {
-      console.log(`Button ${index + 1}:`, button.outerHTML);
-      attachClickListener(button);
-    });
-  } catch (error) {
-    console.error("Error with combined selector:", error);
-  }
-  
-  // Fallback: Find ALL buttons and links on the page
-  console.log("Checking all buttons and links on page...");
-  document.querySelectorAll("button, input[type='submit'], a").forEach(element => {
-    const text = (element.textContent || element.value || "").toLowerCase();
-    const id = (element.id || "").toLowerCase();
-    const classes = Array.from(element.classList).join(" ").toLowerCase();
-    
-    // Check if this element looks payment-related
-    if (text.includes("pay") || 
-        text.includes("checkout") ||
-        text.includes("buy") ||
-        text.includes("order") ||
-        id.includes("pay") ||
-        id.includes("checkout") ||
-        id.includes("buy") ||
-        id.includes("order") ||
-        classes.includes("pay") ||
-        classes.includes("checkout") ||
-        element.type === "submit" && isPaymentPage) {
-      
-      console.log("Found potential payment element:", element.outerHTML);
-      attachClickListener(element);
-    }
-  });
-  
-  // Special case for forms
-  document.querySelectorAll("form").forEach(form => {
-    console.log("Adding submit listener to form:", form);
-    form.addEventListener("submit", handleFormSubmit, true);
-  });
-}
-
-// Handle form submissions
-function handleFormSubmit(event) {
-  console.log("Form submit intercepted", event);
-  
-  // Check if this form is likely for payments
-  const formHtml = event.target.outerHTML.toLowerCase();
-  const paymentIndicators = ['payment', 'checkout', 'pay', 'order', 'buy', 'credit', 'debit', 'upi'];
-  
-  if (paymentIndicators.some(indicator => formHtml.includes(indicator))) {
-    console.log("Payment form detected!");
-    
-    // Get current domain
-    const currentVendor = window.location.hostname.toLowerCase();
-    
-    // Look for UPI field
-    const upiField = event.target.querySelector("[id*='upi'], [name*='upi'], [id*='vpa'], [name*='vpa']");
-    let vendorId = currentVendor;
-    
-    if (upiField && upiField.value) {
-      vendorId = upiField.value.toLowerCase();
-      console.log("Found UPI ID:", vendorId);
-    }
-    
-    // Check if vendor is restricted - directly check against our default config
-    if (shouldDelayPayment(vendorId, currentVendor)) {
-      console.log("Payment should be delayed!");
-      event.preventDefault();
-      event.stopPropagation();
-      
-      // Show timer
-      showTimerOverlay(config.waitTime, vendorId, event.target);
-      return false;
-    }
-  }
-}
-
-// Attach click listener to potential payment element
-function attachClickListener(element) {
-  // Remove any existing listeners
-  element.removeEventListener("click", handleButtonClick);
-  
-  // Add new listener - use capture phase to intercept early
-  element.addEventListener("click", handleButtonClick, true);
-  console.log("Attached click listener to:", element);
-}
-
-// Handle button clicks
-function handleButtonClick(event) {
-  console.log("Button click intercepted:", event.target);
-  
-  const currentVendor = window.location.hostname.toLowerCase();
-  
-  // Try to find UPI ID
-  const upiField = document.querySelector("#vendorUPI, [id*='upi'], [name*='upi'], [id*='vpa'], [name*='vpa']");
-  let vendorId = currentVendor;
-  
-  if (upiField && upiField.value) {
-    vendorId = upiField.value.toLowerCase();
-    console.log("Found UPI ID:", vendorId);
-  }
-  
-  // Check if vendor is restricted
-  if (shouldDelayPayment(vendorId, currentVendor)) {
-    console.log("Payment should be delayed!");
-    event.preventDefault();
-    event.stopPropagation();
-    
-    // Show timer
-    showTimerOverlay(config.waitTime, vendorId, event.target);
-    return false;
-  } else {
-    console.log("Payment not restricted for vendor:", vendorId);
-  }
-}
-
-// Check if payment should be delayed
-function shouldDelayPayment(vendorId, domain) {
-  // First check the vendor ID against restricted list
-  if (config.restrictedVendors.some(restrictedVendor => 
-      vendorId.includes(restrictedVendor) || restrictedVendor.includes(vendorId))) {
-    return true;
-  }
-  
-  // Then check domain against restricted list
-  if (config.restrictedVendors.some(restrictedVendor => 
-      domain.includes(restrictedVendor) || restrictedVendor.includes(domain))) {
-    return true;
-  }
-  
-  // For test page - always delay payments on local files
-  if (window.location.protocol === 'file:') {
-    console.log("Test page detected - enforcing delay");
-    return true;
-  }
-  
-  return false;
-}
-
-// Show timer overlay - simplified version
-function showTimerOverlay(seconds, vendor, originalElement) {
-  console.log(`Showing ${seconds} second timer for ${vendor}`);
-  
-  // Create overlay
-  const overlay = document.createElement("div");
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    z-index: 9999999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-family: Arial, sans-serif;
-  `;
-  
-  // Create timer container
-  const container = document.createElement("div");
-  container.style.cssText = `
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    text-align: center;
-    max-width: 400px;
-    width: 80%;
-  `;
-  
-  // Add title
-  const title = document.createElement("h2");
-  title.textContent = "Payment Cooling Period";
-  title.style.margin = "0 0 15px 0";
-  
-  // Add timer display
-  const timerDisplay = document.createElement("div");
-  timerDisplay.style.cssText = `
-    font-size: 3rem;
-    font-weight: bold;
-    margin: 15px 0;
-    color: #e74c3c;
-  `;
-  timerDisplay.textContent = seconds;
+  // Add heading
+  const heading = document.createElement('h2');
+  heading.textContent = 'Restricted Transaction Alert';
+  heading.style.color = '#d9534f';
+  heading.style.margin = '0 0 15px 0';
   
   // Add message
-  const message = document.createElement("p");
-  message.textContent = `Please wait ${seconds} seconds before proceeding with this payment.`;
+  const message = document.createElement('p');
+  message.innerHTML = `Transaction to <strong>${vendorUPI}</strong> has been restricted!`;
   
-  // Add buttons
-  const buttonContainer = document.createElement("div");
-  buttonContainer.style.cssText = `
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
-  `;
+  // Add timer display
+  const timerDisplay = document.createElement('div');
+  timerDisplay.id = 'timer-display';
+  timerDisplay.style.fontSize = '24px';
+  timerDisplay.style.fontWeight = 'bold';
+  timerDisplay.style.textAlign = 'center';
+  timerDisplay.style.margin = '15px 0';
+  timerDisplay.textContent = `${timer} seconds`;
   
-  const cancelButton = document.createElement("button");
-  cancelButton.textContent = "Cancel";
-  cancelButton.style.cssText = `
-    padding: 8px 16px;
-    background-color: #e74c3c;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  `;
+  // Add button container
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.display = 'flex';
+  buttonContainer.style.justifyContent = 'space-between';
+  buttonContainer.style.marginTop = '20px';
   
-  const continueButton = document.createElement("button");
-  continueButton.textContent = "Continue";
-  continueButton.style.cssText = `
-    padding: 8px 16px;
-    background-color: #ccc;
-    color: #666;
-    border: none;
-    border-radius: 4px;
-    cursor: not-allowed;
-  `;
+  // Add cancel button
+  const cancelButton = document.createElement('button');
+  cancelButton.textContent = 'Cancel Transaction';
+  cancelButton.style.padding = '10px 15px';
+  cancelButton.style.backgroundColor = '#d9534f';
+  cancelButton.style.color = 'white';
+  cancelButton.style.border = 'none';
+  cancelButton.style.borderRadius = '4px';
+  cancelButton.style.cursor = 'pointer';
+  cancelButton.style.width = '48%';
   
-  // Add elements to DOM
+  // Add proceed button
+  const proceedButton = document.createElement('button');
+  proceedButton.textContent = 'Proceed Anyway';
+  proceedButton.style.padding = '10px 15px';
+  proceedButton.style.backgroundColor = '#5cb85c';
+  proceedButton.style.color = 'white';
+  proceedButton.style.border = 'none';
+  proceedButton.style.borderRadius = '4px';
+  proceedButton.style.cursor = 'pointer';
+  proceedButton.style.width = '48%';
+  
+  // Assemble modal
   buttonContainer.appendChild(cancelButton);
-  buttonContainer.appendChild(continueButton);
+  buttonContainer.appendChild(proceedButton);
+  modalContent.appendChild(heading);
+  modalContent.appendChild(message);
+  modalContent.appendChild(timerDisplay);
+  modalContent.appendChild(buttonContainer);
+  modal.appendChild(modalContent);
   
-  container.appendChild(title);
-  container.appendChild(message);
-  container.appendChild(timerDisplay);
-  container.appendChild(buttonContainer);
+  // Add to body
+  document.body.appendChild(modal);
   
-  overlay.appendChild(container);
-  document.body.appendChild(overlay);
-  
-  // Timer logic
-  let timeLeft = seconds;
-  const countdown = setInterval(() => {
-    timeLeft--;
-    timerDisplay.textContent = timeLeft;
-    
-    if (timeLeft <= 0) {
-      clearInterval(countdown);
-      continueButton.style.backgroundColor = "#2ecc71";
-      continueButton.style.color = "white";
-      continueButton.style.cursor = "pointer";
+  // Set up countdown
+  let countdown = timer;
+  const interval = setInterval(() => {
+    countdown--;
+    timerDisplay.textContent = `${countdown} seconds`;
+    if (countdown <= 0) {
+      clearInterval(interval);
+      document.body.removeChild(modal);
+      onCancel();
     }
   }, 1000);
   
-  // Button handlers
-  cancelButton.addEventListener("click", () => {
-    clearInterval(countdown);
-    document.body.removeChild(overlay);
-    console.log("Payment cancelled");
+  // Button event listeners
+  cancelButton.addEventListener('click', function() {
+    clearInterval(interval);
+    if (document.body.contains(modal)) {
+      document.body.removeChild(modal);
+    }
+    onCancel();
   });
   
-  continueButton.addEventListener("click", () => {
-    if (timeLeft <= 0) {
-      clearInterval(countdown);
-      document.body.removeChild(overlay);
-      console.log("Payment proceeding after wait period");
+  proceedButton.addEventListener('click', function() {
+    clearInterval(interval);
+    if (document.body.contains(modal)) {
+      document.body.removeChild(modal);
+    }
+    onProceed();
+  });
+  
+  return modal;
+}
+
+// Listen for DOM content loaded to ensure we can find all elements
+document.addEventListener('DOMContentLoaded', function() {
+  // Find payment forms and buttons
+  const forms = document.querySelectorAll('form');
+  forms.forEach(form => {
+    form.addEventListener('submit', function(event) {
+      // Look for vendor UPI field
+      const vendorUPIField = form.querySelector('#vendorUPI, [name="vendorUPI"], [name="upi"], [name="vpa"]');
+      if (!vendorUPIField) return; // Skip if no UPI field is found
       
-      // Try to trigger the original payment
-      try {
-        if (originalElement.tagName === 'FORM') {
-          console.log("Submitting original form");
-          originalElement.submit();
-        } else {
-          console.log("Clicking original element");
-          const clickEvent = new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
+      const vendorUPI = vendorUPIField.value;
+      if (!vendorUPI) return; // Skip if UPI field is empty
+      
+      // Check if this vendor is restricted
+      chrome.runtime.sendMessage({ type: "getRestrictedVendors" }, (response) => {
+        if (response && response.vendors && response.vendors.includes(vendorUPI)) {
+          // Prevent the default form submission
+          event.preventDefault();
+          event.stopPropagation();
+          
+          // Get the timer for this vendor
+          chrome.runtime.sendMessage({ type: "getVendorTimer", vendor: vendorUPI }, (response) => {
+            if (!response || !response.timer) return;
+            
+            const timer = response.timer;
+            
+            // Create confirmation modal
+            createConfirmationModal(
+              vendorUPI, 
+              timer,
+              // onProceed callback
+              function() {
+                // Increment vendor timer for future transactions
+                chrome.runtime.sendMessage({ 
+                  type: "incrementVendorTimer", 
+                  vendor: vendorUPI 
+                });
+                
+                // Submit the form to proceed with payment
+                form.submit();
+              },
+              // onCancel callback
+              function() {
+                alert("Transaction cancelled!");
+              }
+            );
           });
-          originalElement.dispatchEvent(clickEvent);
         }
-      } catch (error) {
-        console.error("Error triggering original action:", error);
-        alert("You can now proceed with your payment.");
-      }
-    }
-  });
-}
-
-// Set up mutation observer for dynamically added buttons
-function setupObserver() {
-  const observer = new MutationObserver(mutations => {
-    let shouldRescan = false;
-    
-    mutations.forEach(mutation => {
-      if (mutation.addedNodes && mutation.addedNodes.length > 0) {
-        shouldRescan = true;
-      }
+      });
     });
-    
-    if (shouldRescan) {
-      console.log("DOM changed, rescanning for payment buttons");
-      findPaymentButtons();
+  });
+  
+  // Also look for standalone payment buttons
+  const payButtons = document.querySelectorAll('#payButton, [data-action="pay"], .pay-button, button:contains("Pay")');
+  payButtons.forEach(button => {
+    // Only add listener if it's not inside a form we've already handled
+    if (!button.closest('form')) {
+      button.addEventListener('click', function(event) {
+        // Try to find a nearby UPI field
+        const container = button.closest('div, section');
+        const vendorUPIField = container ? 
+          container.querySelector('#vendorUPI, [name="vendorUPI"], [name="upi"], [name="vpa"]') : 
+          document.querySelector('#vendorUPI, [name="vendorUPI"], [name="upi"], [name="vpa"]');
+        
+        if (!vendorUPIField) return;
+        const vendorUPI = vendorUPIField.value;
+        if (!vendorUPI) return;
+        
+        // Check if this vendor is restricted
+        chrome.runtime.sendMessage({ type: "getRestrictedVendors" }, (response) => {
+          if (response && response.vendors && response.vendors.includes(vendorUPI)) {
+            // Prevent the default click behavior
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Get the timer for this vendor
+            chrome.runtime.sendMessage({ type: "getVendorTimer", vendor: vendorUPI }, (response) => {
+              if (!response || !response.timer) return;
+              
+              const timer = response.timer;
+              
+              // Create confirmation modal
+              createConfirmationModal(
+                vendorUPI, 
+                timer,
+                // onProceed callback
+                function() {
+                  // Increment vendor timer for future transactions
+                  chrome.runtime.sendMessage({ 
+                    type: "incrementVendorTimer", 
+                    vendor: vendorUPI 
+                  });
+                  
+                  // Trigger the original button click
+                  const clickEvent = new MouseEvent('click', {
+                    bubbles: false,  // Don't bubble to avoid infinite loop
+                    cancelable: true,
+                    view: window
+                  });
+                  button.dispatchEvent(clickEvent);
+                },
+                // onCancel callback
+                function() {
+                  alert("Transaction cancelled!");
+                }
+              );
+            });
+          }
+        });
+      }, true); // Use capture phase to intercept early
     }
   });
-  
-  // Start observing
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-  
-  console.log("Mutation observer set up");
-}
+});
 
-// Initialize extension
-function initialize() {
-  console.log("Initializing Payment Timer Extension");
-  loadConfiguration();
-  setupObserver();
+// For cases where the page is already loaded when our script runs
+if (document.readyState === 'complete') {
+  const event = new Event('DOMContentLoaded');
+  document.dispatchEvent(event);
 }
-
-// Start the extension
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initialize);
-} else {
-  initialize();
-}
-
-// Force scan after a short delay to catch late-loading elements
-setTimeout(findPaymentButtons, 2000);
-setTimeout(findPaymentButtons, 5000);

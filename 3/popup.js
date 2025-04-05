@@ -1,48 +1,124 @@
-// Popup script for Payment Timer Extension
-
-// Load saved settings when popup opens
-document.addEventListener('DOMContentLoaded', function() {
-  // Get references to form elements
-  const waitTimeInput = document.getElementById('wait-time');
-  const vendorsTextarea = document.getElementById('vendors');
-  const saveButton = document.getElementById('save-button');
-  const statusDiv = document.getElementById('status');
+// Display feedback message
+function showFeedback(message, isError = false) {
+  const feedbackDiv = document.createElement('div');
+  feedbackDiv.textContent = message;
+  feedbackDiv.style.padding = '8px';
+  feedbackDiv.style.marginTop = '10px';
+  feedbackDiv.style.borderRadius = '4px';
+  feedbackDiv.style.backgroundColor = isError ? '#f8d7da' : '#d4edda';
+  feedbackDiv.style.color = isError ? '#721c24' : '#155724';
   
-  // Load current settings
-  chrome.storage.local.get(['waitTime', 'restrictedVendors'], function(data) {
-    if (data.waitTime) {
-      waitTimeInput.value = data.waitTime;
+  const container = document.querySelector('body');
+  container.insertBefore(feedbackDiv, document.getElementById('vendorList'));
+  
+  // Remove after 3 seconds
+  setTimeout(() => {
+    if (container.contains(feedbackDiv)) {
+      container.removeChild(feedbackDiv);
+    }
+  }, 3000);
+}
+
+// Load the list of restricted vendors
+function loadVendors() {
+  chrome.runtime.sendMessage({ type: "getRestrictedVendors" }, (response) => {
+    if (!response || !response.vendors) {
+      showFeedback("Failed to load vendors", true);
+      return;
     }
     
-    if (data.restrictedVendors && Array.isArray(data.restrictedVendors)) {
-      vendorsTextarea.value = data.restrictedVendors.join('\n');
+    const vendorList = document.getElementById("vendorList");
+    vendorList.innerHTML = "";
+    
+    if (response.vendors.length === 0) {
+      const emptyMessage = document.createElement("li");
+      emptyMessage.textContent = "No restricted vendors added";
+      emptyMessage.style.fontStyle = "italic";
+      emptyMessage.style.color = "#666";
+      emptyMessage.style.padding = "10px 0";
+      vendorList.appendChild(emptyMessage);
+    } else {
+      response.vendors.forEach(vendor => {
+        // Create list item for each vendor
+        const li = document.createElement("li");
+        li.style.display = "flex";
+        li.style.justifyContent = "space-between";
+        li.style.alignItems = "center";
+        li.style.padding = "8px 0";
+        li.style.borderBottom = "1px solid #eee";
+        
+        // Vendor UPI text
+        const vendorText = document.createElement("span");
+        vendorText.textContent = vendor;
+        li.appendChild(vendorText);
+        
+        // Remove button
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "×";
+        deleteButton.title = "Remove vendor";
+        deleteButton.style.backgroundColor = "#dc3545";
+        deleteButton.style.color = "white";
+        deleteButton.style.border = "none";
+        deleteButton.style.borderRadius = "50%";
+        deleteButton.style.width = "24px";
+        deleteButton.style.height = "24px";
+        deleteButton.style.cursor = "pointer";
+        deleteButton.style.display = "flex";
+        deleteButton.style.justifyContent = "center";
+        deleteButton.style.alignItems = "center";
+        deleteButton.style.fontSize = "18px";
+        deleteButton.style.lineHeight = "1";
+        
+        deleteButton.addEventListener("click", () => {
+          chrome.runtime.sendMessage({ type: "removeVendor", vendor: vendor }, (response) => {
+            if (response && response.success) {
+              loadVendors();
+              showFeedback(`Removed ${vendor}`);
+            } else {
+              showFeedback("Failed to remove vendor", true);
+            }
+          });
+        });
+        
+        li.appendChild(deleteButton);
+        vendorList.appendChild(li);
+      });
     }
   });
+}
+
+// Handle add vendor button click
+document.getElementById("addVendor").addEventListener("click", () => {
+  const vendorUPI = document.getElementById("newVendorUPI").value.trim();
+  if (!vendorUPI) {
+    showFeedback("Please enter a UPI ID", true);
+    return;
+  }
   
-  // Save settings when button is clicked
-  saveButton.addEventListener('click', function() {
-    // Get values from form
-    const waitTime = parseInt(waitTimeInput.value) || 15;
-    const vendorsText = vendorsTextarea.value;
-    
-    // Convert vendors text to array
-    const restrictedVendors = vendorsText
-      .split('\n')
-      .map(vendor => vendor.trim())
-      .filter(vendor => vendor.length > 0);
-    
-    // Save to storage
-    chrome.storage.local.set({
-      waitTime: waitTime,
-      restrictedVendors: restrictedVendors
-    }, function() {
-      // Show success message
-      statusDiv.textContent = 'Settings saved!';
-      
-      // Clear status message after 2 seconds
-      setTimeout(function() {
-        statusDiv.textContent = '';
-      }, 2000);
-    });
+  chrome.runtime.sendMessage({ type: "addVendor", vendor: vendorUPI }, (response) => {
+    if (response && response.success) {
+      document.getElementById("newVendorUPI").value = ""; // Clear the input
+      loadVendors();
+      showFeedback(`Added ${vendorUPI}`);
+    } else {
+      showFeedback("Failed to add vendor", true);
+    }
   });
 });
+
+// Handle clear vendors button click
+document.getElementById("clearVendors").addEventListener("click", () => {
+  if (confirm("Are you sure you want to clear all restricted vendors?")) {
+    chrome.runtime.sendMessage({ type: "clearVendors" }, (response) => {
+      if (response && response.success) {
+        loadVendors();
+        showFeedback("All vendors cleared");
+      } else {
+        showFeedback("Failed to clear vendors", true);
+      }
+    });
+  }
+});
+
+// Initial load of vendors
+loadVendors();
