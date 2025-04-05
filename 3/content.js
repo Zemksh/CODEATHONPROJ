@@ -121,6 +121,41 @@ function createConfirmationModal(vendorUPI, timer, onProceed, onCancel) {
   return modal;
 }
 
+// Function to show success notification
+function showSuccessNotification(vendorUPI) {
+  const notification = document.createElement('div');
+  notification.style.position = 'fixed';
+  notification.style.top = '20px';
+  notification.style.right = '20px';
+  notification.style.backgroundColor = '#5cb85c';
+  notification.style.color = 'white';
+  notification.style.padding = '15px';
+  notification.style.borderRadius = '5px';
+  notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+  notification.style.zIndex = '10001';
+  notification.style.minWidth = '250px';
+  notification.style.textAlign = 'center';
+  
+  const title = document.createElement('div');
+  title.style.fontWeight = 'bold';
+  title.style.marginBottom = '5px';
+  title.textContent = 'Payment Processed';
+  
+  const message = document.createElement('div');
+  message.textContent = `Transaction to ${vendorUPI} completed successfully.`;
+  
+  notification.appendChild(title);
+  notification.appendChild(message);
+  document.body.appendChild(notification);
+  
+  // Remove after 3 seconds
+  setTimeout(() => {
+    if (document.body.contains(notification)) {
+      document.body.removeChild(notification);
+    }
+  }, 3000);
+}
+
 // Function to check if a vendor is restricted and show modal if needed
 function checkAndHandleRestrictedVendor(vendorUPI, onProceed, onCancel) {
   if (!vendorUPI) return false;
@@ -147,6 +182,9 @@ function checkAndHandleRestrictedVendor(vendorUPI, onProceed, onCancel) {
               type: "incrementVendorTimer", 
               vendor: vendorUPI 
             });
+            
+            // Show success notification
+            showSuccessNotification(vendorUPI);
             
             // Proceed with action
             onProceed();
@@ -369,7 +407,10 @@ function appendTestButton() {
     createConfirmationModal(
       testVendor,
       30,
-      () => console.log('Test proceed clicked'),
+      () => {
+        console.log('Test proceed clicked');
+        showSuccessNotification(testVendor);
+      },
       () => console.log('Test cancel clicked')
     );
   });
