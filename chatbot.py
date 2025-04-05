@@ -4,7 +4,7 @@ import requests
 import csv
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static")
 
 API_KEY = "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"  # Replace with your actual OpenRouter API key
 MODEL = "mistralai/mistral-7b-instruct:free"
@@ -67,7 +67,7 @@ def chat():
     return jsonify({"reply": reply})
 
 # Initialize CSV if it doesn't exist
-if __name__ == "__main__":
+if __name__== "__main__":
     if not os.path.exists("blocked_vendors.csv"):
         with open("blocked_vendors.csv", "w", newline="") as file:
             writer = csv.writer(file)
