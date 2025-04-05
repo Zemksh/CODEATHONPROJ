@@ -1,0 +1,30 @@
+{
+    "manifest_version": 2,
+    "name": "BudgetBuddy",
+    "version": "1.0",
+    "description": "Manage UPI transactions and restrict specific vendors.",
+    "permissions": [
+      "storage",
+      "activeTab"
+    ],
+    "browser_action": {
+      "default_popup": "popup.html",
+      "default_icon": "icons/icon.png"
+    },
+    "background": {
+      "scripts": ["background.js"],
+      "persistent": false
+    },
+    "content_scripts": [
+      {
+        "matches": ["*://*/*"],
+        "js": ["content.js"]
+      }
+    ],
+    "icons": {
+      "16": "icons/icon.png",
+      "48": "icons/icon.png",
+      "128": "icons/icon.png"
+    }
+  }
+  
