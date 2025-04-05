@@ -37,7 +37,7 @@
   <form id="paymentForm">
     <div class="form-group">
       <label for="vendorUPI">Vendor UPI ID:</label>
-      <input type="text" id="vendorUPI" value="vendor@upi" required>
+      <input type="text" id="vendorUPI" name="vendorUPI" value="vendor@upi" required>
     </div>
     <div class="form-group">
       <label for="amount">Amount:</label>
@@ -49,6 +49,7 @@
   <script>
     document.getElementById('paymentForm').addEventListener('submit', function(e) {
       e.preventDefault();
+      console.log('Form submitted with vendor:', document.getElementById('vendorUPI').value);
       alert('Payment would be processed now in a real app!');
       // Normally this would submit the form to a payment processor
     });

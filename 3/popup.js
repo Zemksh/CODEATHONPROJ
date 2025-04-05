@@ -21,11 +21,22 @@ function showFeedback(message, isError = false) {
 
 // Load the list of restricted vendors
 function loadVendors() {
+  console.log("BudgetBuddy Popup: Loading vendors");
+  
   chrome.runtime.sendMessage({ type: "getRestrictedVendors" }, (response) => {
-    if (!response || !response.vendors) {
-      showFeedback("Failed to load vendors", true);
+    if (chrome.runtime.lastError) {
+      console.error("BudgetBuddy Popup: Error getting vendors:", chrome.runtime.lastError);
+      showFeedback("Failed to load vendors: " + chrome.runtime.lastError.message, true);
       return;
     }
+    
+    if (!response || !response.vendors) {
+      console.error("BudgetBuddy Popup: Invalid response:", response);
+      showFeedback("Failed to load vendors: Invalid response", true);
+      return;
+    }
+    
+    console.log("BudgetBuddy Popup: Vendors received:", response.vendors);
     
     const vendorList = document.getElementById("vendorList");
     vendorList.innerHTML = "";
@@ -71,6 +82,11 @@ function loadVendors() {
         
         deleteButton.addEventListener("click", () => {
           chrome.runtime.sendMessage({ type: "removeVendor", vendor: vendor }, (response) => {
+            if (chrome.runtime.lastError) {
+              showFeedback("Failed to remove vendor: " + chrome.runtime.lastError.message, true);
+              return;
+            }
+            
             if (response && response.success) {
               loadVendors();
               showFeedback(`Removed ${vendor}`);
@@ -87,38 +103,70 @@ function loadVendors() {
   });
 }
 
-// Handle add vendor button click
-document.getElementById("addVendor").addEventListener("click", () => {
-  const vendorUPI = document.getElementById("newVendorUPI").value.trim();
-  if (!vendorUPI) {
-    showFeedback("Please enter a UPI ID", true);
-    return;
-  }
+// Function to initialize popup
+function initPopup() {
+  console.log("BudgetBuddy Popup: Initializing popup");
   
-  chrome.runtime.sendMessage({ type: "addVendor", vendor: vendorUPI }, (response) => {
-    if (response && response.success) {
-      document.getElementById("newVendorUPI").value = ""; // Clear the input
-      loadVendors();
-      showFeedback(`Added ${vendorUPI}`);
-    } else {
-      showFeedback("Failed to add vendor", true);
+  // Handle add vendor button click
+  document.getElementById("addVendor").addEventListener("click", () => {
+    const vendorUPI = document.getElementById("newVendorUPI").value.trim();
+    if (!vendorUPI) {
+      showFeedback("Please enter a UPI ID", true);
+      return;
     }
-  });
-});
-
-// Handle clear vendors button click
-document.getElementById("clearVendors").addEventListener("click", () => {
-  if (confirm("Are you sure you want to clear all restricted vendors?")) {
-    chrome.runtime.sendMessage({ type: "clearVendors" }, (response) => {
+    
+    console.log("BudgetBuddy Popup: Adding vendor:", vendorUPI);
+    
+    chrome.runtime.sendMessage({ type: "addVendor", vendor: vendorUPI }, (response) => {
+      if (chrome.runtime.lastError) {
+        showFeedback("Failed to add vendor: " + chrome.runtime.lastError.message, true);
+        return;
+      }
+      
       if (response && response.success) {
+        document.getElementById("newVendorUPI").value = ""; // Clear the input
         loadVendors();
-        showFeedback("All vendors cleared");
+        showFeedback(`Added ${vendorUPI}`);
       } else {
-        showFeedback("Failed to clear vendors", true);
+        showFeedback("Failed to add vendor", true);
       }
     });
-  }
-});
+  });
 
-// Initial load of vendors
-loadVendors();
+  // Handle clear vendors button click
+  document.getElementById("clearVendors").addEventListener("click", () => {
+    if (confirm("Are you sure you want to clear all restricted vendors?")) {
+      console.log("BudgetBuddy Popup: Clearing vendors");
+      
+      chrome.runtime.sendMessage({ type: "clearVendors" }, (response) => {
+        if (chrome.runtime.lastError) {
+          showFeedback("Failed to clear vendors: " + chrome.runtime.lastError.message, true);
+          return;
+        }
+        
+        if (response && response.success) {
+          loadVendors();
+          showFeedback("All vendors cleared");
+        } else {
+          showFeedback("Failed to clear vendors", true);
+        }
+      });
+    }
+  });
+
+  // Also allow pressing Enter to add vendor
+  document.getElementById("newVendorUPI").addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      document.getElementById("addVendor").click();
+    }
+  });
+
+  // Initial load of vendors
+  loadVendors();
+}
+
+// Run initialization when DOM is loaded
+document.addEventListener('DOMContentLoaded', initPopup);
+
+// Log when popup script is loaded
+console.log("BudgetBuddy Popup: Script loaded");
