@@ -1,170 +1,222 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Rubik:wght@500;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            font-family: Tahoma;
-            background: linear-gradient(to right, #e1f5fe, #fff3e0);
-            margin: 0;
-            padding: 0;
-            color: #333;
-            background-image: url('../static/images/back.jpg');
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center;
-            margin: 0;
-            height: 100vh;
-            
-        }
-        .container {
-            padding: 2rem;
-            max-width: 1100px;
-            margin: auto;
-        }
-        .top-section {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 2rem;
-        }
-        .branding {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #ff6f00;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-        }
-        .user-photo {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            margin-right: 0.75rem;
-        }
-        h1 {
-            margin: 0;
-            color: #00796b;
-            font-size: 1.5rem;
-        }
-        .layout {
-            display: flex;
-            gap: 2rem;
-        }
-        .left-column {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            justify-content: center;
-        }
-        .right-column {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        button {
-            padding: 0.9rem;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 1rem;
-            background-color: #4caf50;
-            color: white;
-            cursor: pointer;
-            transition: 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        button:nth-child(2) { background-color: #2196f3; }
-        button:nth-child(3) { background-color: #ff9800; }
-        button:nth-child(4) { background-color: #f44336; }
-        button:hover {
-            transform: scale(1.02);
-            opacity: 0.95;
-        }
-        canvas {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            padding: 1rem;
-            height: 240px !important;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Rubik:wght@500;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Tahoma;
+      background: linear-gradient(to right, #e1f5fe, #fff3e0);
+      margin: 0;
+      padding: 0;
+      color: #333;
+      background-image: url('../static/images/back.jpg');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      height: 100vh;
+    }
+
+    .container {
+      padding: 2rem;
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    .top-section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+
+    .branding {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo img {
+      
+      height: 140px; /* Slightly larger for better visibility */
+      width: auto;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+    }
+
+    .user-photo {
+      width: 100px;
+      height: 90px;
+      border-radius: 50%;
+      margin-right: 0.75rem;
+    }
+
+    h1 {
+      margin: 0;
+      color: #00796b;
+      font-size: 2rem;
+      font-family: Tahoma;
+    }
+
+    .layout {
+      display: flex;
+      gap: 2rem;
+    }
+
+    .left-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    .right-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: flex-end;
+    }
+
+    button {
+      padding: 0.9rem;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1rem;
+      background-color: #8F87F1;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    button:nth-child(2) {
+      background-color: #C68EFD;
+    }
+
+    button:nth-child(3) {
+      background-color: #E9A5F1;
+    }
+
+    button:nth-child(4) {
+      background-color: #FED2E2;
+    }
+
+    button:hover {
+      transform: scale(1.02);
+      opacity: 0.95;
+    }
+
+    canvas {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 1rem;
+      height: 220px !important;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .floating-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 50px; /* Moved from right to left */
+      background-color: white;
+      border: none;
+      border-radius: 50%;
+      width: 90px;
+      height: 90px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .floating-btn img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="top-section">
-            <div class="branding">
-                <div class="logo">BudgetBuddy</div>
-            </div>
-            <div class="user-info">
-                <img src="{{ user.photo_url }}" class="user-photo" alt="User Photo">
-                <h1>Welcome, {{ user.name }}!</h1>
-            </div>
+  <div class="container">
+    <div class="top-section">
+      <div class="branding">
+        <div class="logo">
+            <a href="/">
+                <img src="../static/images/logonobg.png" alt="Logo">
+            </a>
         </div>
-        <div class="layout">
-            <div class="left-column">
-                <button>Weekly Goal</button>
-                <button>Daily Goal</button>
-                <button>Manually Enter Payment</button>
-                <button>Block a Vendor!</button>
-            </div>
-            <div class="right-column">
-                <canvas id="weeklyGraph"></canvas>
-                <canvas id="dailyGraph"></canvas>
-            </div>
-        </div>
+      </div>
+      <div class="user-info">
+        <img src="{{ user.photo_url }}" class="user-photo" alt="User Photo">
+        <h1>Welcome, {{ user.name }}!</h1>
+      </div>
     </div>
+    <div class="layout">
+      <div class="left-column">
+        <button>Weekly Goal</button>
+        <button>Daily Goal</button>
+        <button>Manually Enter Payment</button>
+        <button>Block a Vendor!</button>
+      </div>
+      <div class="right-column">
+        <canvas id="weeklyGraph"></canvas>
+        <canvas id="dailyGraph"></canvas>
+      </div>
+    </div>
+  </div>
 
-    <script>
-        const weeklyCtx = document.getElementById('weeklyGraph').getContext('2d');
-        const dailyCtx = document.getElementById('dailyGraph').getContext('2d');
+  <!-- Floating Robot Button (Now on bottom-left) -->
+  <button class="floating-btn" action = "">
+    <img src="../static/images/robo.jpg" alt="Robot Assistant">
+  </button>
 
-        new Chart(weeklyCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                datasets: [{
-                    label: 'Weekly Spending ($)',
-                    data: [100, 80, 150, 90, 130, 170, 120],
-                    backgroundColor: '#4caf50'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true
-            }
-        });
+  <script>
+    const weeklyCtx = document.getElementById('weeklyGraph').getContext('2d');
+    const dailyCtx = document.getElementById('dailyGraph').getContext('2d');
 
-        new Chart(dailyCtx, {
-            type: 'line',
-            data: {
-                labels: ['8AM', '12PM', '4PM', '8PM'],
-                datasets: [{
-                    label: 'Daily Spending ($)',
-                    data: [30, 50, 20, 60],
-                    borderColor: '#2196f3',
-                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true
-            }
-        });
-    </script>
+    new Chart(weeklyCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{
+          label: 'Weekly Spending ($)',
+          data: [100, 80, 150, 90, 130, 170, 120],
+          backgroundColor: '#5F99AE'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true
+      }
+    });
+
+    new Chart(dailyCtx, {
+      type: 'line',
+      data: {
+        labels: ['8AM', '12PM', '4PM', '8PM'],
+        datasets: [{
+          label: 'Daily Spending ($)',
+          data: [30, 50, 20, 60],
+          borderColor: '#E9A5F1',
+          backgroundColor: '#FED2E2',
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true
+      }
+    });
+  </script>
 </body>
 </html>
