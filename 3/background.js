@@ -2,6 +2,46 @@
 let restrictedVendors = [];
 let vendorTimers = {};
 
+// Function to parse CSV content
+function parseCSV(csvContent) {
+  const lines = csvContent.split('\n');
+  const headers = lines[0].split(',');
+  const result = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue; // Skip empty lines
+    const vendorName = lines[i].trim();
+    result.push(vendorName);
+  }
+  
+  return result;
+}
+
+// Load vendors from CSV file
+function loadVendorsFromCSV() {
+  console.log("BudgetBuddy: Loading vendors from CSV file");
+  
+  fetch(chrome.runtime.getURL('blocked_vendors.csv'))
+    .then(response => response.text())
+    .then(csvContent => {
+      const vendors = parseCSV(csvContent);
+      console.log("BudgetBuddy: Loaded vendors from CSV:", vendors);
+      
+      // Merge with existing vendors (avoid duplicates)
+      vendors.forEach(vendor => {
+        if (!restrictedVendors.includes(vendor)) {
+          restrictedVendors.push(vendor);
+        }
+      });
+      
+      // Save the updated list to storage
+      saveToStorage("restrictedVendors", restrictedVendors);
+    })
+    .catch(error => {
+      console.error("BudgetBuddy: Error loading CSV file:", error);
+    });
+}
+
 // Initialize data from storage
 function initializeFromStorage() {
   console.log("BudgetBuddy: Initializing from storage");
@@ -25,9 +65,14 @@ function initializeFromStorage() {
           restrictedVendors, 
           vendorTimers 
         });
+        
+        // After loading from storage, also load from CSV
+        loadVendorsFromCSV();
       });
     } else {
       console.warn("BudgetBuddy: Storage API not available, using in-memory storage only");
+      // Still try to load from CSV
+      loadVendorsFromCSV();
     }
   } catch (err) {
     console.error("BudgetBuddy: Error initializing storage:", err);
@@ -118,6 +163,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         } else {
           sendResponse({ success: false, error: "No vendor specified" });
         }
+        break;
+        
+      case "reloadVendorsFromCSV":
+        loadVendorsFromCSV();
+        sendResponse({ success: true });
         break;
         
       default:

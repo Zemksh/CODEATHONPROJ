@@ -160,6 +160,35 @@ function initPopup() {
       document.getElementById("addVendor").click();
     }
   });
+  
+  // Add reload CSV button
+  if (!document.getElementById("reloadCSV")) {
+    const buttonContainer = document.querySelector('.button-container');
+    const reloadBtn = document.createElement('button');
+    reloadBtn.id = "reloadCSV";
+    reloadBtn.textContent = "Reload CSV";
+    reloadBtn.style.backgroundColor = "#28a745";
+    reloadBtn.style.marginTop = "10px";
+    reloadBtn.style.width = "100%";
+    
+    reloadBtn.addEventListener("click", () => {
+      chrome.runtime.sendMessage({ type: "reloadVendorsFromCSV" }, (response) => {
+        if (chrome.runtime.lastError) {
+          showFeedback("Failed to reload CSV: " + chrome.runtime.lastError.message, true);
+          return;
+        }
+        
+        if (response && response.success) {
+          setTimeout(() => loadVendors(), 500); // Give time for the CSV to load
+          showFeedback("Vendors reloaded from CSV");
+        } else {
+          showFeedback("Failed to reload vendors from CSV", true);
+        }
+      });
+    });
+    
+    document.body.appendChild(reloadBtn);
+  }
 
   // Initial load of vendors
   loadVendors();

@@ -6,7 +6,7 @@ import re
 
 app = Flask(__name__, static_folder="static")
 
-API_KEY = "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"
+API_KEY = "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"
 MODEL = "mistralai/mistral-7b-instruct:free"
 
 # Extract vendor name if user says "block vendor"
@@ -67,9 +67,9 @@ def chat():
     vendor = extract_vendor(user_input)
     if vendor:
         # Log blocked vendor to CSV
-        with open("blocked_vendors.csv", "a", newline="") as file:
+        with open("3/blocked_vendors.csv", "a", newline="") as file:
             writer = csv.writer(file)
-            writer.writerow([vendor])
+            writer.writerow([vendor+"@upi"])
         print(f"✅ Blocked vendor added to CSV: {vendor}")
 
         reply = f"🛑 Vendor '{vendor}' has been blocked successfully!"
@@ -79,8 +79,8 @@ def chat():
     return jsonify({"reply": reply})
 
 if __name__ == "__main__":
-    if not os.path.exists("blocked_vendors.csv"):
-        with open("blocked_vendors.csv", "w", newline="") as file:
+    if not os.path.exists("3/blocked_vendors.csv"):
+        with open("3/blocked_vendors.csv", "w", newline="") as file:
             writer = csv.writer(file)
             writer.writerow(["Vendor"])
     app.run(debug=True)

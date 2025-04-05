@@ -41,6 +41,7 @@
     .button-container {
       display: flex;
       justify-content: space-between;
+      margin-bottom: 10px;
     }
     
     button {
@@ -68,6 +69,15 @@
     #clearVendors:hover {
       background-color: #5a6268;
     }
+    
+    #reloadCSV {
+      width: 100%;
+      background-color: #28a745;
+    }
+    
+    #reloadCSV:hover {
+      background-color: #218838;
+    }
   </style>
 </head>
 <body>
@@ -78,6 +88,7 @@
     <button id="addVendor">Add Restricted Vendor</button>
     <button id="clearVendors">Clear</button>
   </div>
+  <button id="reloadCSV">Reload from CSV</button>
   <script src="popup.js"></script>
 </body>
 </html>

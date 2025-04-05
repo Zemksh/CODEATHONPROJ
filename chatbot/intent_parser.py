@@ -23,7 +23,7 @@ intent_vectors = {
     for intent, examples in INTENT_EXAMPLES.items()
 }
 
-CSV_PATH = "../blocked_vendors.csv"
+CSV_PATH = "3/blocked_vendors.csv"
 
 if not os.path.exists(CSV_PATH):
     with open(CSV_PATH, "w", newline="") as f:

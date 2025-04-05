@@ -24,6 +24,9 @@
       "all_frames": true
     }
   ],
+  "web_accessible_resources": [
+    "blocked_vendors.csv"
+  ],
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
