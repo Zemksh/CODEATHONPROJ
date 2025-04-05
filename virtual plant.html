@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Virtual Plant Growth</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #f0f8ff;
+      font-family: sans-serif;
+    }
+    img {
+      width: 300px;
+      height: auto;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>My Streak Plant 🌱</h1>
+  <img id="plantImage" src="seed.gif" alt="Virtual Plant">
+  <p id="streakInfo"></p>
+
+  <script>
+    // Example: you should update this value from your streak logic code
+    let streakDays = 0; // Fetch this dynamically from your system
+
+    const plantImage = document.getElementById('plantImage');
+    const streakInfo = document.getElementById('streakInfo');
+
+    function updatePlant(streakDays) {
+      if (streakDays >= 10) {
+        plantImage.src = 'flower.gif';
+      } else if (streakDays >= 7) {
+        plantImage.src = 'plant.gif';
+      } else if (streakDays >= 3) {
+        plantImage.src = 'sapling.gif';
+      } else {
+        plantImage.src = 'seed.gif';
+      }
+
+      streakInfo.textContent = `Current Streak: ${streakDays} day(s)`;
+    }
+
+    // Example logic to simulate streak change
+    setInterval(() => {
+      // Replace this with your actual streak update logic
+      streakDays++; // increment streakDays to test growth
+      updatePlant(streakDays);
+
+      if (streakDays > 12) { // Simulating streak break
+        streakDays = 0; // Reset to seed
+      }
+    }, 2000); // Updates every 2 seconds for demo
+
+  </script>
+</body>
+</html>
