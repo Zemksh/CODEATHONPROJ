@@ -1,30 +1,29 @@
 {
-    "manifest_version": 2,
-    "name": "BudgetBuddy",
-    "version": "1.0",
-    "description": "Manage UPI transactions and restrict specific vendors.",
-    "permissions": [
-      "storage",
-      "activeTab"
-    ],
-    "browser_action": {
-      "default_popup": "popup.html",
-      "default_icon": "icons/icon.png"
-    },
-    "background": {
-      "scripts": ["background.js"],
-      "persistent": false
-    },
-    "content_scripts": [
-      {
-        "matches": ["*://*/*"],
-        "js": ["content.js"]
-      }
-    ],
-    "icons": {
-      "16": "icons/icon.png",
-      "48": "icons/icon.png",
-      "128": "icons/icon.png"
+  "manifest_version": 3,
+  "name": "Payment Timer Extension",
+  "version": "1.0",
+  "description": "Implements a cooling period before payments",
+  "permissions": [
+    "storage",
+    "alarms",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://localhost:5000/*",
+    "file://*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>", "file://*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
     }
+  ],
+  "action": {
+    "default_popup": "popup.html"
   }
-  
+}
