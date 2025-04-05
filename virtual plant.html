@@ -24,7 +24,7 @@
 <body>
 
   <h1>My Streak Plant 🌱</h1>
-  <img id="plantImage" src="seed.gif" alt="Virtual Plant">
+  <img id="plantImage" src="../3/icons/seed.gif" alt="Virtual Plant">
   <p id="streakInfo"></p>
 
   <script>
@@ -35,14 +35,14 @@
     const streakInfo = document.getElementById('streakInfo');
 
     function updatePlant(streakDays) {
-      if (streakDays >= 10) {
-        plantImage.src = 'flower.gif';
+      if (streakDays >= 31) {
+        plantImage.src = '../3/icons/flower.gif';
+      } else if (streakDays >= 14) {
+        plantImage.src = '../3/icons/plant.gif';
       } else if (streakDays >= 7) {
-        plantImage.src = 'plant.gif';
-      } else if (streakDays >= 3) {
-        plantImage.src = 'sapling.gif';
+        plantImage.src = '../3/icons/sapling.gif';
       } else {
-        plantImage.src = 'seed.gif';
+        plantImage.src = '../3/icons/seed.gif';
       }
 
       streakInfo.textContent = `Current Streak: ${streakDays} day(s)`;
@@ -54,7 +54,7 @@
       streakDays++; // increment streakDays to test growth
       updatePlant(streakDays);
 
-      if (streakDays > 12) { // Simulating streak break
+      if (streakDays > 365) { // Simulating streak break
         streakDays = 0; // Reset to seed
       }
     }, 2000); // Updates every 2 seconds for demo
