@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Virtual Plant Growth</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
+    
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #f0f8ff;
+      font-family: 'Nunito', sans-serif;
+      background-image: url('../static/images/backstreak.jpg');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+    
+    h1 {
+      font-size: 3.2rem;
+      font-weight: 700;
+      color: rgba(220, 240, 255, 0.95);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      margin-bottom: 0.5rem;
+      letter-spacing: 1px;
+    }
+    
+    img {
+      width: 300px;
+      height: auto;
+      /* filter: drop-shadow(0 0 10px rgba(180, 220, 255, 0.5)); */
+    }
+    .seed-size {
+      width:180px; /* Smaller size specifically for the seed */
+    }
+    #streakInfo {
+      font-size: 1.8rem;
+      color: rgba(210, 235, 255, 0.9);
+      background: rgba(0, 50, 100, 0.4);
+      padding: 0.8rem 1.5rem;
+      border-radius: 12px;
+      margin-top: 1.0rem;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+
+<body>
+  <h1>My Streak Plant 🌱</h1>
+  <img id="plantImage" src="../static/images/seed.gif" alt="Virtual Plant" class="seed-size">
+  <p id="streakInfo"></p>
+
+  <script>
+    // Example: you should update this value from your streak logic code
+    let streakDays = 0; // Fetch this dynamically from your system
+
+    const plantImage = document.getElementById('plantImage');
+    const streakInfo = document.getElementById('streakInfo');
+
+    function updatePlant(streakDays) {
+      if (streakDays >= 31) {
+        plantImage.src = '../static/images/flower.gif';
+        plantImage.className = 'seed-size';
+      } else if (streakDays >= 14) {
+        plantImage.src = '../static/images/plant.gif';
+        plantImage.className = '';
+      } else if (streakDays >= 7) {
+        plantImage.src = '../static/images/sapling.gif';
+        plantImage.className = 'seed-size';
+      } else {
+        plantImage.src = '../static/images/seed.gif';
+        plantImage.className = 'seed-size';
+      }
+
+      streakInfo.textContent = `Current Streak: ${streakDays} day(s)`;
+    }
+
+    // Example logic to simulate streak change
+    setInterval(() => {
+      // Replace this with your actual streak update logic
+      streakDays++; // increment streakDays to test growth
+      updatePlant(streakDays);
+
+      if (streakDays > 365) { // Simulating streak break
+        streakDays = A0; // Reset to seed
+      }
+    }, 2000); // Updates every 2 seconds for demo
+  </script>
+</body>
+</html>
