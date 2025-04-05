@@ -68,7 +68,7 @@
       if (!message) return;
 
       const chatbox = document.getElementById("chatbox");
-      chatbox.innerHTML += `<div class="message user"><strong>You:</strong> ${message}</div>`;
+      chatbox.innerHTML += <div class="message user"><strong>You:</strong> ${message}</div>;
       chatbox.scrollTop = chatbox.scrollHeight;
       input.value = "";
 
@@ -80,10 +80,10 @@
         });
 
         const data = await response.json();
-        chatbox.innerHTML += `<div class="message bot"><strong>Bot:</strong> ${data.reply}</div>`;
+        chatbox.innerHTML += <div class="message bot"><strong>Bot:</strong> ${data.reply}</div>;
         chatbox.scrollTop = chatbox.scrollHeight;
       } catch (err) {
-        chatbox.innerHTML += `<div class="message bot"><strong>Bot:</strong> ❌ Error reaching server</div>`;
+        chatbox.innerHTML += <div class="message bot"><strong>Bot:</strong> ❌ Error reaching server</div>;
       }
     }
 
