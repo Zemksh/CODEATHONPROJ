@@ -14,15 +14,16 @@
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center;
-      height: 100vh;
+      min-height: 100vh;
     }
     .form-group {
       margin-bottom: 15px;
     }
-    h1{
+    h1 {
       color: wheat;
       background-color: #00796b;
       width: 220px;
+      padding: 5px;
     }
     label {
       color: wheat;
@@ -44,6 +45,91 @@
       color: white;
       border: none;
       cursor: pointer;
+      margin-right: 10px;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      color: #666666;
+      cursor: not-allowed;
+    }
+    .radio-container {
+      background-color: rgba(0, 121, 107, 0.8);
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+    }
+    .radio-group {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .radio-option {
+      margin-right: 15px;
+      color: wheat;
+    }
+    .radio-label {
+      display: inline;
+      margin: 0;
+      width: auto;
+      background: none;
+    }
+    #statusMessage {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 5px;
+      display: none;
+    }
+    .warning {
+      color: red;
+      font-weight: bold;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background-color: white;
+      padding: 20px;
+      border-radius: 5px;
+      max-width: 400px;
+      text-align: center;
+    }
+    .modal-buttons {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+    .timer {
+      font-size: 24px;
+      font-weight: bold;
+      color: #00796b;
+      margin: 15px 0;
+    }
+    .cancel-btn {
+      background-color: #f44336;
+    }
+    .proceed-btn {
+      background-color: #FF9800;
+    }
+    .transaction-result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      background-color: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     }
   </style>
 </head>
@@ -56,17 +142,262 @@
     </div>
     <div class="form-group">
       <label for="amount">Amount:</label>
-      <input type="number" id="amount" value="100" required>
+      <input type="number" id="amount" name="amount" value="100" required>
     </div>
+    
+    <div class="radio-container">
+      <h3 style="color: wheat; margin-top: 0;">Purchase Category:</h3>
+      <div class="radio-group">
+        <div class="radio-option">
+          <input type="radio" id="food" name="category" value="food" checked>
+          <label for="food" class="radio-label">Food</label>
+        </div>
+        <div class="radio-option">
+          <input type="radio" id="clothing" name="category" value="clothing">
+          <label for="clothing" class="radio-label">Clothing</label>
+        </div>
+        <div class="radio-option">
+          <input type="radio" id="medical" name="category" value="medical">
+          <label for="medical" class="radio-label">Medical</label>
+        </div>
+        <div class="radio-option">
+          <input type="radio" id="gadgets" name="category" value="gadgets">
+          <label for="gadgets" class="radio-label">Gadgets</label>
+        </div>
+      </div>
+    </div>
+    
     <button type="submit" id="payButton">Pay Now</button>
   </form>
 
+  <div id="statusMessage"></div>
+  <div id="transactionResult" class="transaction-result" style="display: none;"></div>
+
+  <!-- Blocked Vendor Modal -->
+  <div id="blockedVendorModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>⚠️ Restricted Transaction</h2>
+      <p>Vendor <span id="blockedVendorName">vendor@upi</span> is on your restricted list.</p>
+      <div class="timer" id="restrictionTimer">5</div>
+      <p>Are you sure you want to proceed?</p>
+      <div class="modal-buttons">
+        <button id="cancelTransaction" class="cancel-btn">Cancel</button>
+        <button id="proceedTransaction" class="proceed-btn" disabled>Proceed (5s)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div id="successModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>✅ Transaction Successful</h2>
+      <p id="successMessage"></p>
+      <div class="modal-buttons">
+        <button id="closeSuccessModal">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    document.getElementById('paymentForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      console.log('Form submitted with vendor:', document.getElementById('vendorUPI').value);
-      alert('Payment would be processed now in a real app!');
-      // Normally this would submit the form to a payment processor
+    document.addEventListener('DOMContentLoaded', function() {
+      // Elements
+      const vendorInput = document.getElementById('vendorUPI');
+      const paymentForm = document.getElementById('paymentForm');
+      const payButton = document.getElementById('payButton');
+      const blockedVendorModal = document.getElementById('blockedVendorModal');
+      const blockedVendorName = document.getElementById('blockedVendorName');
+      const restrictionTimer = document.getElementById('restrictionTimer');
+      const proceedButton = document.getElementById('proceedTransaction');
+      const cancelButton = document.getElementById('cancelTransaction');
+      const successModal = document.getElementById('successModal');
+      const successMessage = document.getElementById('successMessage');
+      const closeSuccessModal = document.getElementById('closeSuccessModal');
+      const transactionResult = document.getElementById('transactionResult');
+      
+      // List of blocked vendors (normally would be fetched from server)
+      const blockedVendors = ["vendor@upi", "swiggy@upi", "ramesh@upi", "swiggy", "me@upi"];
+      
+      // Timer variables
+      let countdown;
+      let secondsLeft = 5;
+      
+      // Current transaction data
+      let currentTransaction = null;
+      
+      // Check if vendor is blocked
+      function isVendorBlocked(vendorId) {
+        return blockedVendors.includes(vendorId.toLowerCase());
+      }
+      
+      // Start restriction countdown
+      function startRestrictionTimer() {
+        secondsLeft = 5;
+        restrictionTimer.textContent = secondsLeft;
+        proceedButton.disabled = true;
+        proceedButton.textContent = `Proceed (${secondsLeft}s)`;
+        
+        countdown = setInterval(function() {
+          secondsLeft--;
+          restrictionTimer.textContent = secondsLeft;
+          proceedButton.textContent = `Proceed (${secondsLeft}s)`;
+          
+          if (secondsLeft <= 0) {
+            clearInterval(countdown);
+            proceedButton.disabled = false;
+            proceedButton.textContent = 'Proceed';
+          }
+        }, 1000);
+      }
+      
+      // Reset the timer
+      function resetTimer() {
+        clearInterval(countdown);
+        secondsLeft = 5;
+      }
+      
+      // Show blocked vendor modal
+      function showBlockedVendorModal(vendorId) {
+        blockedVendorName.textContent = vendorId;
+        blockedVendorModal.style.display = 'flex';
+        startRestrictionTimer();
+      }
+      
+      // Hide blocked vendor modal
+      function hideBlockedVendorModal() {
+        blockedVendorModal.style.display = 'none';
+        resetTimer();
+      }
+      
+      // Show success modal
+      function showSuccessModal(message) {
+        successMessage.textContent = message;
+        successModal.style.display = 'flex';
+      }
+      
+      // Hide success modal
+      function hideSuccessModal() {
+        successModal.style.display = 'none';
+      }
+      
+      // Generate transaction ID
+      function generateTransactionId() {
+        return `TXN${Date.now().toString().slice(-6)}`;
+      }
+      
+      // Classify transaction
+      function classifyTransaction(category) {
+        const needs = ['food', 'medical'];
+        const wants = ['clothing', 'gadgets'];
+        
+        if (needs.includes(category)) {
+          return 'need';
+        } else if (wants.includes(category)) {
+          return 'want';
+        } else {
+          return 'uncategorized';
+        }
+      }
+      
+      // Process the payment
+      function processPayment(allowBlocked = false) {
+        const vendorId = vendorInput.value;
+        const amount = document.getElementById('amount').value;
+        
+        // Get selected category
+        let selectedCategory = 'food'; // default
+        const categoryOptions = document.getElementsByName('category');
+        for (const option of categoryOptions) {
+          if (option.checked) {
+            selectedCategory = option.value;
+            break;
+          }
+        }
+        
+        // Check if vendor is blocked and user hasn't explicitly allowed it
+        if (isVendorBlocked(vendorId) && !allowBlocked) {
+          showBlockedVendorModal(vendorId);
+          return;
+        }
+        
+        // Create transaction data
+        const transaction = {
+          transaction_id: generateTransactionId(),
+          vendor_id: vendorId,
+          amount: amount,
+          day: "day 1", // Simplified for demo
+          week: 1, // Simplified for demo
+          category: selectedCategory,
+          classification: classifyTransaction(selectedCategory)
+        };
+        
+        // Save current transaction
+        currentTransaction = transaction;
+        
+        // In a real app, you would send this to the server
+        console.log("Processing transaction:", transaction);
+        
+        // Show success message
+        const message = `Payment of ₹${amount} to ${vendorId} processed successfully for ${selectedCategory} (${transaction.classification}).`;
+        showSuccessModal(message);
+        
+        // Display in transaction result area
+        displayTransactionResult(transaction);
+        
+        // In a real app, you would save to CSV on the server
+        saveToCSV(transaction);
+      }
+      
+      // Display transaction result
+      function displayTransactionResult(transaction) {
+        transactionResult.innerHTML = `
+          <h3>Transaction Details</h3>
+          <p><strong>Transaction ID:</strong> ${transaction.transaction_id}</p>
+          <p><strong>Vendor:</strong> ${transaction.vendor_id}</p>
+          <p><strong>Amount:</strong> ₹${transaction.amount}</p>
+          <p><strong>Category:</strong> ${transaction.category} (${transaction.classification})</p>
+          <p><strong>Day/Week:</strong> ${transaction.day}, Week ${transaction.week}</p>
+        `;
+        transactionResult.style.display = 'block';
+      }
+      
+      // Simulated CSV save (in real app, would be server-side)
+      function saveToCSV(transaction) {
+        // This would normally be a server request
+        console.log("Transaction saved to CSV:", transaction);
+        
+        // Format for CSV:
+        // transaction_id,vendor_id,amount_transferred,day_transferred,week_transferred,category,classification
+        const csvRow = [
+          transaction.transaction_id,
+          transaction.vendor_id,
+          transaction.amount,
+          transaction.day,
+          transaction.week,
+          transaction.category,
+          transaction.classification
+        ].join(',');
+        
+        console.log("CSV row:", csvRow);
+      }
+      
+      // Event listeners
+      paymentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        processPayment(false);
+      });
+      
+      cancelButton.addEventListener('click', function() {
+        hideBlockedVendorModal();
+      });
+      
+      proceedButton.addEventListener('click', function() {
+        hideBlockedVendorModal();
+        processPayment(true);
+      });
+      
+      closeSuccessModal.addEventListener('click', function() {
+        hideSuccessModal();
+      });
     });
   </script>
 </body>

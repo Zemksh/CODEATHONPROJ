@@ -123,6 +123,12 @@ function createConfirmationModal(vendorUPI, timer, onProceed, onCancel) {
 
 // Function to show success notification
 function showSuccessNotification(vendorUPI) {
+  // Ensure any existing modal is removed first
+  const existingModal = document.getElementById('budget-buddy-modal');
+  if (existingModal && document.body.contains(existingModal)) {
+    document.body.removeChild(existingModal);
+  }
+  
   const notification = document.createElement('div');
   notification.style.position = 'fixed';
   notification.style.top = '20px';
@@ -382,13 +388,7 @@ function initializeBudgetBuddy() {
   
   // Set up observer for dynamically added elements
   setupDynamicElementObserver();
-  
-  // Add test button for debugging (remove in production)
-  appendTestButton();
 }
-
-// Add a test button to manually trigger the modal (for debugging)
-
 
 // Run initialization when the DOM is loaded
 if (document.readyState === 'loading') {
