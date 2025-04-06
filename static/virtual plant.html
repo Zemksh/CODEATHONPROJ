@@ -36,7 +36,6 @@
     img {
       width: 300px;
       height: auto;
-      /* filter: drop-shadow(0 0 10px rgba(180, 220, 255, 0.5)); */
     }
     .seed-size {
       width:180px; /* Smaller size specifically for the seed */
@@ -62,40 +61,97 @@
   <p id="streakInfo"></p>
 
   <script>
-    // Example: you should update this value from your streak logic code
-    let streakDays = 0; // Fetch this dynamically from your system
-
+    // Initialize variables
+    let streakDays = 0;
     const plantImage = document.getElementById('plantImage');
     const streakInfo = document.getElementById('streakInfo');
-
-    function updatePlant(streakDays) {
-      if (streakDays >= 31) {
+    
+    // Function to update plant based on streak days
+    function updatePlant(days) {
+      console.log("Updating plant for streak days:", days);
+      
+      // Update image src based on streak days
+      if (days >= 31) {
         plantImage.src = '../static/images/flower.gif';
-        plantImage.className = 'seed-size';
-      } else if (streakDays >= 14) {
+        plantImage.className = '';
+      } else if (days >= 14) {
         plantImage.src = '../static/images/plant.gif';
         plantImage.className = '';
-      } else if (streakDays >= 7) {
+      } else if (days >= 7) {
         plantImage.src = '../static/images/sapling.gif';
         plantImage.className = 'seed-size';
       } else {
         plantImage.src = '../static/images/seed.gif';
         plantImage.className = 'seed-size';
       }
-
-      streakInfo.textContent = `Current Streak: ${streakDays} day(s)`;
+      
+      // Forcing a reload of the image
+      plantImage.onload = function() {
+        console.log("Image loaded successfully:", plantImage.src);
+      };
+      
+      plantImage.onerror = function() {
+        console.error("Error loading image:", plantImage.src);
+      };
+      
+      // Force browser to reload the image by adding a cache-busting parameter
+      const timestamp = new Date().getTime();
+      plantImage.src = plantImage.src.split('?')[0] + '?' + timestamp;
+      
+      // Update streak info text
+      streakInfo.textContent = `Current Streak: ${days} day(s)`;
     }
 
-    // Example logic to simulate streak change
-    setInterval(() => {
-      // Replace this with your actual streak update logic
-      streakDays++; // increment streakDays to test growth
-      updatePlant(streakDays);
-
-      if (streakDays > 365) { // Simulating streak break
-        streakDays = A0; // Reset to seed
+    // Setup event listener to receive day/week updates from parent window
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'updateStreak') {
+        streakDays = event.data.days;
+        updatePlant(streakDays);
       }
-    }, 2000); // Updates every 2 seconds for demo
+    });
+
+    // Function to manually check for day changes (as backup method)
+    function checkDayFromStorage() {
+      // Try to get day from localStorage if available
+      const storedDay = localStorage.getItem('currentDay');
+      const storedWeek = localStorage.getItem('currentWeek');
+      
+      if (storedDay && storedWeek) {
+        const day = parseInt(storedDay);
+        const week = parseInt(storedWeek);
+        const calculatedDays = ((week - 1) * 7) + day;
+        
+        if (calculatedDays !== streakDays) {
+          streakDays = calculatedDays;
+          updatePlant(streakDays);
+        }
+      }
+    }
+    
+    // Initial check from localStorage
+    checkDayFromStorage();
+    
+    // Check localStorage periodically for changes
+    setInterval(checkDayFromStorage, 1000);
+    
+    // Expose function to be called from parent window
+    window.updateStreakFromParent = function(day, week) {
+      streakDays = ((week - 1) * 7) + day;
+      updatePlant(streakDays);
+      return true; // Confirmation that function was called
+    };
+    
+    // Notify when this page is fully loaded
+    window.onload = function() {
+      // Log plant initial state
+      console.log("Plant page loaded. Initial streak days:", streakDays);
+      updatePlant(streakDays);
+      
+      // If in iframe, notify parent
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'plantPageReady' }, '*');
+      }
+    };
   </script>
 </body>
 </html>

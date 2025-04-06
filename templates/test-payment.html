@@ -257,6 +257,8 @@
             if (data.success) {
               currentDaySpan.textContent = data.day;
               currentWeekSpan.textContent = data.week;
+              // Update plant streak after loading day/week
+              updatePlantStreak();
             }
           })
           .catch(error => {
@@ -422,12 +424,87 @@
           if (data.success) {
             currentDaySpan.textContent = data.day;
             currentWeekSpan.textContent = data.week;
+            // Update plant streak after day changes
+            updatePlantStreak();
           }
         })
         .catch(error => {
           console.error('Error updating day:', error);
         });
       }
+      
+      // Function to update the plant in the virtual-plant.html page
+      function updatePlantStreak() {
+        const day = parseInt(currentDaySpan.textContent);
+        const week = parseInt(currentWeekSpan.textContent);
+        
+        // Calculate streak days
+        const streakDays = ((week - 1) * 7) + day;
+        
+        // Store in localStorage (so plant page can access it)
+        localStorage.setItem('currentDay', day);
+        localStorage.setItem('currentWeek', week);
+        localStorage.setItem('streakDays', streakDays);
+        
+        console.log("Updating plant streak to", streakDays, "days (Day", day, "Week", week, ")");
+        
+        // Method 1: Try to access plant page if it's in an iframe
+        try {
+          const plantIframe = document.querySelector('iframe[src*="virtual-plant.html"]');
+          if (plantIframe && plantIframe.contentWindow) {
+            // Try to call function in the plant iframe
+            const result = plantIframe.contentWindow.updateStreakFromParent(day, week);
+            console.log("Plant update via iframe function call:", result);
+          }
+        } catch (e) {
+          console.log("Could not update plant via direct iframe access:", e);
+        }
+        
+        // Method 2: Use postMessage to communicate with plant page
+        try {
+          // Broadcast to all potential plant windows
+          if (window.frames && window.frames.length) {
+            for (let i = 0; i < window.frames.length; i++) {
+              try {
+                window.frames[i].postMessage({
+                  type: 'updateStreak',
+                  days: streakDays
+                }, '*');
+              } catch (err) {
+                console.log("Error sending to frame", i, err);
+              }
+            }
+          }
+          
+          // Also try sending to any known plant window
+          if (window.plantWindow) {
+            window.plantWindow.postMessage({
+              type: 'updateStreak',
+              days: streakDays
+            }, '*');
+          }
+          
+          // Broadcast to any window that might be listening
+          window.postMessage({
+            type: 'updateStreak',
+            days: streakDays
+          }, '*');
+        } catch (e) {
+          console.log("Could not update plant via postMessage:", e);
+        }
+      }
+      
+      // Listen for plant page ready message
+      window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'plantPageReady') {
+          console.log("Plant page is ready, sending current day/week");
+          // Store reference to plant window
+          if (event.source) {
+            window.plantWindow = event.source;
+          }
+          updatePlantStreak();
+        }
+      });
       
       // Initial load of day/week
       loadDayAndWeek();
@@ -451,9 +528,13 @@
         hideSuccessModal();
       });
       
+      // Modify the existing nextDayButton click event to also update the plant
       nextDayButton.addEventListener('click', function() {
         updateDay();
       });
+      
+      // Initial sync with plant page (if it's already loaded)
+      setTimeout(updatePlantStreak, 500);
     });
   </script>
 </body>
