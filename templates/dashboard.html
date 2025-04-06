@@ -170,12 +170,11 @@
     </div>
     <div class="layout">
       <div class="left-column">
-        <button>Weekly Goal</button>
-        <button>Daily Goal</button>
-        <button>Manually Enter Payment</button>
-        <button>Block a Vendor!</button>
+        <button><a href="../static/daily.html">Daily Goal</a></button>
+        <button><a href="../static/weekly.html">Weekly Goal</a></button>
+        <button><a href="../static/test-payment.html"> Manually Enter Payment</a></button>
         <button><a href="../static/virtual plant.html">Virtual Plant Streak</a></button>
-      </div>
+      </div>  
       <div class="right-column">
         <canvas id="weeklyGraph"></canvas>
         <canvas id="dailyGraph"></canvas>
@@ -229,5 +228,9 @@
       }
     });
   </script>
+  {{dailystreak}}
 </body>
 </html>
+
+
+

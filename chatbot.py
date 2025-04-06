@@ -6,7 +6,7 @@ import os
 
 app = Flask(__name__, static_folder="static")
 
-API_KEY = "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"  # Replace with your actual OpenRouter API key
+API_KEY = "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"  # Replace with your actual OpenRouter API key
 MODEL = "mistralai/mistral-7b-instruct:free"
 
 # Extract vendor name if user says "block vendor"
