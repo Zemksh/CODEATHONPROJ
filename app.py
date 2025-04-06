@@ -188,6 +188,69 @@ def save_to_csv(transaction_data):
     print(f"✅ Transaction saved to CSV: {transaction_data['transaction_id']}")
     return True
 
+# New function to write transaction with simplified parameters
+def write_transaction_to_csv(vendor_id, amount_paid, day_week_of_payment):
+    """
+    Writes transaction data to the transaction_history.csv file with simplified parameters.
+    
+    Parameters:
+    vendor_id (str): The vendor ID or name
+    amount_paid (float): The amount paid in the transaction
+    day_week_of_payment (str): String in format "day,week" (e.g., "3,2" for Day 3, Week 2)
+    
+    Returns:
+    bool: True if successful, False otherwise
+    """
+    # Path to the CSV file
+    csv_path = TRANSACTION_CSV_PATH
+    
+    # Make sure the directory exists
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+    
+    # Check if file exists to determine if headers are needed
+    file_exists = os.path.isfile(csv_path)
+    
+    try:
+        # Parse day and week from input string
+        day, week = map(int, day_week_of_payment.split(','))
+        
+        # Generate a transaction ID
+        transaction_id = generate_transaction_id()
+        
+        # Open file in append mode
+        with open(csv_path, "a", newline="") as file:
+            writer = csv.writer(file)
+            
+            # Write header if file is new
+            if not file_exists:
+                writer.writerow([
+                    "transaction_id", 
+                    "vendor_id", 
+                    "amount_transferred", 
+                    "day_transferred", 
+                    "week_transferred", 
+                    "category", 
+                    "classification"
+                ])
+            
+            # Write the transaction data
+            writer.writerow([
+                transaction_id,
+                vendor_id,
+                amount_paid,
+                day,
+                week,
+                "uncategorized",  # Default category
+                "uncategorized"   # Default classification
+            ])
+        
+        print(f"✅ Transaction saved to CSV: {transaction_id}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error saving transaction to CSV: {e}")
+        return False
+
 @app.route('/')
 def dashboard():
     user = {
@@ -293,6 +356,27 @@ def advance_day():
         'message': f'Advanced to Day {day}, Week {week}'
     })
 
+# New endpoint for the simplified transaction writing
+@app.route('/write_transaction', methods=['POST'])
+def write_transaction():
+    data = request.get_json()
+    vendor_id = data.get('vendor_id', '')
+    amount_paid = data.get('amount_paid', 0)
+    
+    # Get current day and week if not provided
+    if 'day_week_of_payment' in data:
+        day_week = data.get('day_week_of_payment')
+    else:
+        day, week = get_day_and_week()
+        day_week = f"{day},{week}"
+    
+    success = write_transaction_to_csv(vendor_id, amount_paid, day_week)
+    
+    return jsonify({
+        'success': success,
+        'message': 'Transaction written to CSV' if success else 'Failed to write transaction'
+    })
+
 if __name__ == "__main__":
     # Initialize files
     initialize_transaction_csv()
@@ -303,4 +387,4 @@ if __name__ == "__main__":
         with open("3/day_tracker.txt", "w") as file:
             file.write("1,1")
     
-    app.run(debug=True)
+    app.run(debug=True) 
