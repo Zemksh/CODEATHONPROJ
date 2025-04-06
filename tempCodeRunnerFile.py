@@ -1,1 +1,1 @@
-../static/images/profilepic.jpg
+t

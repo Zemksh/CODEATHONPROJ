@@ -145,7 +145,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         
       case "getVendorTimer":
         const timer = message.vendor && vendorTimers[message.vendor] ? 
-          vendorTimers[message.vendor] : 30; // default to 30 seconds
+          vendorTimers[message.vendor] : 1; // default to 30 seconds
         console.log("BudgetBuddy: Timer for vendor:", message.vendor, timer);
         sendResponse({ timer: timer });
         break;
@@ -153,9 +153,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case "incrementVendorTimer":
         if (message.vendor) {
           if (vendorTimers[message.vendor]) {
-            vendorTimers[message.vendor] += 30;
+            vendorTimers[message.vendor] += 1;
           } else {
-            vendorTimers[message.vendor] = 60; // Start with 60 seconds
+            vendorTimers[message.vendor] = 1; // Start with 60 seconds
           }
           saveToStorage("vendorTimers", vendorTimers);
           console.log("BudgetBuddy: Timer incremented for vendor:", message.vendor, vendorTimers[message.vendor]);

@@ -135,6 +135,7 @@ function showSuccessNotification(vendorUPI) {
   
   // Show a simple alert with "payment successful" message
   alert(`Payment to ${vendorUPI} successful!`);
+
 }
 
 // Function to check if a vendor is restricted and show modal if needed
