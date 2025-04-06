@@ -43,7 +43,6 @@
     }
 
     .logo img {
-      
       height: 140px; /* Slightly larger for better visibility */
       width: auto;
     }
@@ -151,6 +150,28 @@
       height: 100%;
       border-radius: 50%;
     }
+    
+    .goal-display {
+      margin-top: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 1rem;
+      width: 100%;
+    }
+    
+    .goal-item {
+      font-size: 1.2rem;
+      margin: 8px 0;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .goal-value {
+      font-weight: bold;
+      color: #00796b;
+    }
   </style>
 </head>
 <body>
@@ -170,11 +191,24 @@
     </div>
     <div class="layout">
       <div class="left-column">
+        <!-- Moved Goal Display Section ABOVE buttons -->
+        <div class="goal-display">
+          <div class="goal-item">
+            <span>Daily Goal:</span> 
+            <span class="goal-value" id="daily-goal-display">-</span>
+          </div>
+          <div class="goal-item">
+            <span>Weekly Goal:</span> 
+            <span class="goal-value" id="weekly-goal-display">-</span>
+          </div>
+        </div>
+      
         <button><a href="../static/daily.html">Daily Goal</a></button>
         <button><a href="../static/weekly.html">Weekly Goal</a></button>
-        <button><a href="../static/test-payment.html"> Manually Enter Payment</a></button>
+        <button><a href="../static/test-payment.html">Manually Enter Payment</a></button>
         <button><a href="../static/virtual plant.html">Virtual Plant Streak</a></button>
-      </div>  
+      </div>
+      
       <div class="right-column">
         <canvas id="weeklyGraph"></canvas>
         <canvas id="dailyGraph"></canvas>
@@ -187,10 +221,24 @@
     <a href="../static/index.html">
       <img src="../static/images/robo.jpg" alt="Robot Assistant">
     </a>
-    
   </button>
 
   <script>
+    // Display goals from localStorage
+    function displayGoals() {
+      const dailyGoal = localStorage.getItem('dailyGoal') || '-';
+      const weeklyGoal = localStorage.getItem('weeklyGoal') || '-';
+      
+      document.getElementById('daily-goal-display').textContent = dailyGoal;
+      document.getElementById('weekly-goal-display').textContent = weeklyGoal;
+    }
+    
+    // Call function when page loads
+    window.addEventListener('load', displayGoals);
+    
+    // Also check for updates periodically (every 2 seconds)
+    setInterval(displayGoals, 2000);
+    
     const weeklyCtx = document.getElementById('weeklyGraph').getContext('2d');
     const dailyCtx = document.getElementById('dailyGraph').getContext('2d');
 
@@ -231,6 +279,3 @@
   {{dailystreak}}
 </body>
 </html>
-
-
-
