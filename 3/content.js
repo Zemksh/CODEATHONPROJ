@@ -135,6 +135,9 @@ function showSuccessNotification(vendorUPI) {
   
   // Show a simple alert with "payment successful" message
   alert(`Payment to ${vendorUPI} successful!`);
+  if (document.body.contains(modal)) {
+    document.body.removeChild(modal);  // Physically removes the modal from the DOM
+  }
 
 }
 
