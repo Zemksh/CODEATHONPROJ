@@ -388,35 +388,7 @@ function initializeBudgetBuddy() {
 }
 
 // Add a test button to manually trigger the modal (for debugging)
-function appendTestButton() {
-  const testButton = document.createElement('button');
-  testButton.textContent = 'Test BudgetBuddy Modal';
-  testButton.style.position = 'fixed';
-  testButton.style.bottom = '10px';
-  testButton.style.right = '10px';
-  testButton.style.zIndex = '9999';
-  testButton.style.padding = '10px';
-  testButton.style.backgroundColor = '#007BFF';
-  testButton.style.color = 'white';
-  testButton.style.border = 'none';
-  testButton.style.borderRadius = '4px';
-  
-  testButton.addEventListener('click', () => {
-    // For testing, use a dummy UPI
-    const testVendor = 'test@upi';
-    createConfirmationModal(
-      testVendor,
-      30,
-      () => {
-        console.log('Test proceed clicked');
-        showSuccessNotification(testVendor);
-      },
-      () => console.log('Test cancel clicked')
-    );
-  });
-  
-  document.body.appendChild(testButton);
-}
+
 
 // Run initialization when the DOM is loaded
 if (document.readyState === 'loading') {
