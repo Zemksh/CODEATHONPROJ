@@ -131,10 +131,35 @@
       background-color: rgba(255, 255, 255, 0.9);
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     }
+    .day-tracker {
+      background-color: rgba(0, 121, 107, 0.8);
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      color: wheat;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .day-counter {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .next-day-btn {
+      background-color: #2196F3;
+    }
   </style>
 </head>
 <body>
   <h1>Test Payment</h1>
+  
+  <div class="day-tracker">
+    <div class="day-counter">
+      Day: <span id="currentDay">1</span>, Week: <span id="currentWeek">1</span>
+    </div>
+    <button id="nextDayButton" class="next-day-btn">Next Day</button>
+  </div>
+  
   <form id="paymentForm">
     <div class="form-group">
       <label for="vendorUPI">Vendor UPI ID:</label>
@@ -213,9 +238,9 @@
       const successMessage = document.getElementById('successMessage');
       const closeSuccessModal = document.getElementById('closeSuccessModal');
       const transactionResult = document.getElementById('transactionResult');
-      
-      // List of blocked vendors (normally would be fetched from server)
-      const blockedVendors = ["vendor@upi", "swiggy@upi", "ramesh@upi", "swiggy", "me@upi"];
+      const nextDayButton = document.getElementById('nextDayButton');
+      const currentDaySpan = document.getElementById('currentDay');
+      const currentWeekSpan = document.getElementById('currentWeek');
       
       // Timer variables
       let countdown;
@@ -224,9 +249,38 @@
       // Current transaction data
       let currentTransaction = null;
       
+      // Load current day and week
+      function loadDayAndWeek() {
+        fetch('/update-day', { method: 'POST' })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              currentDaySpan.textContent = data.day;
+              currentWeekSpan.textContent = data.week;
+            }
+          })
+          .catch(error => {
+            console.error('Error loading day/week:', error);
+          });
+      }
+      
       // Check if vendor is blocked
-      function isVendorBlocked(vendorId) {
-        return blockedVendors.includes(vendorId.toLowerCase());
+      function checkVendorStatus(vendorId, callback) {
+        fetch('/check_vendor', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ vendor_id: vendorId })
+        })
+        .then(response => response.json())
+        .then(data => {
+          callback(data.blocked);
+        })
+        .catch(error => {
+          console.error('Error checking vendor status:', error);
+          callback(false);
+        });
       }
       
       // Start restriction countdown
@@ -279,72 +333,70 @@
         successModal.style.display = 'none';
       }
       
-      // Generate transaction ID
-      function generateTransactionId() {
-        return `TXN${Date.now().toString().slice(-6)}`;
-      }
-      
-      // Classify transaction
-      function classifyTransaction(category) {
-        const needs = ['food', 'medical'];
-        const wants = ['clothing', 'gadgets'];
-        
-        if (needs.includes(category)) {
-          return 'need';
-        } else if (wants.includes(category)) {
-          return 'want';
-        } else {
-          return 'uncategorized';
+      // Get selected category from radio buttons
+      function getSelectedCategory() {
+        const categoryOptions = document.getElementsByName('category');
+        for (const option of categoryOptions) {
+          if (option.checked) {
+            return option.value;
+          }
         }
+        return 'food'; // Default
       }
       
       // Process the payment
       function processPayment(allowBlocked = false) {
         const vendorId = vendorInput.value;
         const amount = document.getElementById('amount').value;
+        const category = getSelectedCategory();
         
-        // Get selected category
-        let selectedCategory = 'food'; // default
-        const categoryOptions = document.getElementsByName('category');
-        for (const option of categoryOptions) {
-          if (option.checked) {
-            selectedCategory = option.value;
-            break;
+        if (!allowBlocked) {
+          // Check if vendor is blocked
+          checkVendorStatus(vendorId, function(isBlocked) {
+            if (isBlocked) {
+              showBlockedVendorModal(vendorId);
+            } else {
+              sendPaymentRequest(vendorId, amount, category);
+            }
+          });
+        } else {
+          // User explicitly allowed payment to blocked vendor
+          sendPaymentRequest(vendorId, amount, category);
+        }
+      }
+      
+      // Send payment request to server
+      function sendPaymentRequest(vendorId, amount, category) {
+        fetch('/process_payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            vendor_id: vendorId,
+            amount: amount,
+            category: category
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Show success message
+            showSuccessModal(data.message);
+            
+            // Store transaction data
+            currentTransaction = data.transaction;
+            
+            // Display transaction details
+            displayTransactionResult(data.transaction);
+          } else {
+            // Show error
+            console.error('Payment failed:', data.message);
           }
-        }
-        
-        // Check if vendor is blocked and user hasn't explicitly allowed it
-        if (isVendorBlocked(vendorId) && !allowBlocked) {
-          showBlockedVendorModal(vendorId);
-          return;
-        }
-        
-        // Create transaction data
-        const transaction = {
-          transaction_id: generateTransactionId(),
-          vendor_id: vendorId,
-          amount: amount,
-          day: "day 1", // Simplified for demo
-          week: 1, // Simplified for demo
-          category: selectedCategory,
-          classification: classifyTransaction(selectedCategory)
-        };
-        
-        // Save current transaction
-        currentTransaction = transaction;
-        
-        // In a real app, you would send this to the server
-        console.log("Processing transaction:", transaction);
-        
-        // Show success message
-        const message = `Payment of ₹${amount} to ${vendorId} processed successfully for ${selectedCategory} (${transaction.classification}).`;
-        showSuccessModal(message);
-        
-        // Display in transaction result area
-        displayTransactionResult(transaction);
-        
-        // In a real app, you would save to CSV on the server
-        saveToCSV(transaction);
+        })
+        .catch(error => {
+          console.error('Error processing payment:', error);
+        });
       }
       
       // Display transaction result
@@ -355,30 +407,30 @@
           <p><strong>Vendor:</strong> ${transaction.vendor_id}</p>
           <p><strong>Amount:</strong> ₹${transaction.amount}</p>
           <p><strong>Category:</strong> ${transaction.category} (${transaction.classification})</p>
-          <p><strong>Day/Week:</strong> ${transaction.day}, Week ${transaction.week}</p>
+          <p><strong>Day/Week:</strong> Day ${transaction.day}, Week ${transaction.week}</p>
         `;
         transactionResult.style.display = 'block';
       }
       
-      // Simulated CSV save (in real app, would be server-side)
-      function saveToCSV(transaction) {
-        // This would normally be a server request
-        console.log("Transaction saved to CSV:", transaction);
-        
-        // Format for CSV:
-        // transaction_id,vendor_id,amount_transferred,day_transferred,week_transferred,category,classification
-        const csvRow = [
-          transaction.transaction_id,
-          transaction.vendor_id,
-          transaction.amount,
-          transaction.day,
-          transaction.week,
-          transaction.category,
-          transaction.classification
-        ].join(',');
-        
-        console.log("CSV row:", csvRow);
+      // Update day counter
+      function updateDay() {
+        fetch('/update-day', {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            currentDaySpan.textContent = data.day;
+            currentWeekSpan.textContent = data.week;
+          }
+        })
+        .catch(error => {
+          console.error('Error updating day:', error);
+        });
       }
+      
+      // Initial load of day/week
+      loadDayAndWeek();
       
       // Event listeners
       paymentForm.addEventListener('submit', function(e) {
@@ -397,6 +449,10 @@
       
       closeSuccessModal.addEventListener('click', function() {
         hideSuccessModal();
+      });
+      
+      nextDayButton.addEventListener('click', function() {
+        updateDay();
       });
     });
   </script>

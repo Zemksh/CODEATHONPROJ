@@ -10,6 +10,10 @@ app = Flask(__name__, static_folder="static")
 API_KEY = "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"
 MODEL = "mistralai/mistral-7b-instruct:free"
 
+# Path to transaction history CSV and blocked vendors
+TRANSACTION_CSV_PATH = "static/transaction_history.csv"
+BLOCKED_VENDORS_PATH = "3/blocked_vendors.csv"
+
 # Extract vendor name if user says "block vendor"
 def extract_vendor(user_input):
     match = re.search(r"block\s+(\w+)", user_input.lower())
@@ -50,47 +54,11 @@ def chat_with_openrouter(user_input):
         print("❌ Error calling OpenRouter:", e)
         return "❌ Couldn't contact AI service. Please try again."
 
-@app.route('/')
-def dashboard():
-    user = {
-        'name': 'Adil',
-        'photo_url': '../static/images/profilepic.jpg'
-    }
-    return render_template('dashboard.html', user=user)
-
-# Chat endpoint
-@app.route("/chat", methods=["POST"])
-def chat():
-    data = request.get_json()
-    user_input = data.get("message", "")
-    print("🔁 User input:", user_input)
-
-    vendor = extract_vendor(user_input)
-    if vendor:
-        # Log blocked vendor to CSV
-        with open("3/blocked_vendors.csv", "a", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow([vendor+"@upi"])
-        print(f"✅ Blocked vendor added to CSV: {vendor}")
-
-        reply = f"🛑 Vendor '{vendor}' has been blocked successfully!"
-    else:
-        reply = chat_with_openrouter(user_input)
-
-    return jsonify({"reply": reply})
-
-if __name__ == "__main__":
-    if not os.path.exists("3/blocked_vendors.csv"):
-        with open("3/blocked_vendors.csv", "w", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(["Vendor"])
-    app.run(debug=True)
-    # Path to transaction history CSV
-TRANSACTION_CSV_PATH = "../static/transaction_history.csv"
-BLOCKED_VENDORS_PATH = "3/blocked_vendors.csv"
-
 # Initialize transaction history CSV if it doesn't exist
 def initialize_transaction_csv():
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(TRANSACTION_CSV_PATH), exist_ok=True)
+    
     if not os.path.exists(TRANSACTION_CSV_PATH):
         with open(TRANSACTION_CSV_PATH, "w", newline="") as file:
             writer = csv.writer(file)
@@ -104,6 +72,16 @@ def initialize_transaction_csv():
                 "classification"
             ])
 
+# Initialize blocked vendors CSV if it doesn't exist
+def initialize_blocked_vendors_csv():
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(BLOCKED_VENDORS_PATH), exist_ok=True)
+    
+    if not os.path.exists(BLOCKED_VENDORS_PATH):
+        with open(BLOCKED_VENDORS_PATH, "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["Vendor"])
+
 # Check if a vendor is in the blocked list
 def is_vendor_blocked(vendor_id):
     if not os.path.exists(BLOCKED_VENDORS_PATH):
@@ -111,6 +89,7 @@ def is_vendor_blocked(vendor_id):
         
     with open(BLOCKED_VENDORS_PATH, "r", newline="") as file:
         reader = csv.reader(file)
+        next(reader, None)  # Skip header
         blocked_vendors = [row[0].lower() for row in reader]
         
     return vendor_id.lower() in blocked_vendors
@@ -141,31 +120,61 @@ def generate_transaction_id():
     
     return f"TXN{timestamp}-{transaction_count + 1}"
 
-# Get current day and week (simplified for demo)
+# Get current day and week 
 def get_day_and_week():
-    # This is a simple implementation - in a real app you might track actual dates
-    if os.path.exists(TRANSACTION_CSV_PATH):
-        with open(TRANSACTION_CSV_PATH, "r", newline="") as file:
-            reader = csv.reader(file)
-            # Skip header
-            next(reader, None)
-            # Count unique days and calculate week
-            days = set()
-            for row in reader:
-                if len(row) >= 4:  # Make sure row has enough elements
-                    days.add(row[3])  # day_transferred column
-            
-            current_day = f"day {len(days) + 1}"
-            current_week = (len(days) // 7) + 1
-            return current_day, current_week
+    # Check if there's a day tracking file
+    day_tracker_path = "3/day_tracker.txt"
+    if os.path.exists(day_tracker_path):
+        with open(day_tracker_path, "r") as file:
+            try:
+                day, week = map(int, file.read().strip().split(","))
+                return day, week
+            except:
+                pass
     
-    # Default if no transactions exist
-    return "day 1", 1
+    # Default to day 1, week 1 if no file exists
+    with open(day_tracker_path, "w") as file:
+        file.write("1,1")
+    return 1, 1
+
+# Update day and week counter
+def update_day():
+    day, week = get_day_and_week()
+    day += 1
+    if day > 7:
+        week += 1
+        day = 1
+    
+    # Save updated values
+    with open("3/day_tracker.txt", "w") as file:
+        file.write(f"{day},{week}")
+    
+    return day, week
 
 # Save transaction to CSV
-def save_transaction(transaction_data):
+def save_to_csv(transaction_data):
+    # Make sure directory exists
+    os.makedirs(os.path.dirname(TRANSACTION_CSV_PATH), exist_ok=True)
+    
+    # Check if file exists to determine if we need headers
+    file_exists = os.path.isfile(TRANSACTION_CSV_PATH)
+    
     with open(TRANSACTION_CSV_PATH, "a", newline="") as file:
         writer = csv.writer(file)
+        
+        # Write header if file is new
+        if not file_exists:
+            writer.writerow([
+                "transaction_id", 
+                "vendor_id", 
+                "amount_transferred", 
+                "day_transferred", 
+                "week_transferred", 
+                "category", 
+                "classification"
+            ])
+        
+        # Write the transaction data
         writer.writerow([
             transaction_data["transaction_id"],
             transaction_data["vendor_id"],
@@ -175,8 +184,41 @@ def save_transaction(transaction_data):
             transaction_data["category"],
             transaction_data["classification"]
         ])
+    
+    print(f"✅ Transaction saved to CSV: {transaction_data['transaction_id']}")
+    return True
 
-# Add these routes to your Flask app
+@app.route('/')
+def dashboard():
+    user = {
+        'name': 'Adil',
+        'photo_url': '../static/images/profilepic.jpg'
+    }
+    return render_template('dashboard.html', user=user)
+
+# Chat endpoint
+@app.route("/chat", methods=["POST"])
+def chat():
+    data = request.get_json()
+    user_input = data.get("message", "")
+    print("🔁 User input:", user_input)
+
+    vendor = extract_vendor(user_input)
+    if vendor:
+        # Initialize if needed
+        initialize_blocked_vendors_csv()
+        
+        # Log blocked vendor to CSV
+        with open(BLOCKED_VENDORS_PATH, "a", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow([vendor+"@upi"])
+        print(f"✅ Blocked vendor added to CSV: {vendor}")
+
+        reply = f"🛑 Vendor '{vendor}' has been blocked successfully!"
+    else:
+        reply = chat_with_openrouter(user_input)
+
+    return jsonify({"reply": reply})
 
 @app.route('/static/test-payment.html')
 def test_payment_page():
@@ -204,29 +246,22 @@ def process_payment():
     amount = data.get('amount', 0)
     category = data.get('category', 'uncategorized')
     
-    # Check if vendor is blocked
-    if is_vendor_blocked(vendor_id):
-        return jsonify({
-            'success': False,
-            'message': f'Payment blocked! Vendor {vendor_id} is in your blocked list.'
-        })
-    
     # Get current day and week
-    current_day, current_week = get_day_and_week()
+    day, week = get_day_and_week()
     
     # Create transaction data
     transaction_data = {
         "transaction_id": generate_transaction_id(),
         "vendor_id": vendor_id,
         "amount": amount,
-        "day": current_day,
-        "week": current_week,
+        "day": day,
+        "week": week,
         "category": category,
         "classification": classify_transaction(category)
     }
     
     # Save to CSV
-    save_transaction(transaction_data)
+    save_to_csv(transaction_data)
     
     return jsonify({
         'success': True,
@@ -234,7 +269,38 @@ def process_payment():
         'transaction': transaction_data
     })
 
-# Make sure to add this to your app's initialization
+@app.route('/save-transaction', methods=['POST'])
+def save_transaction():
+    data = request.json
+    transaction = data['data']
+    
+    # Save to the transaction history CSV
+    success = save_to_csv(transaction)
+    
+    return jsonify({
+        "success": success, 
+        "message": "Transaction saved to CSV"
+    })
+
+@app.route('/update-day', methods=['POST'])
+def advance_day():
+    day, week = update_day()
+    
+    return jsonify({
+        'success': True,
+        'day': day,
+        'week': week,
+        'message': f'Advanced to Day {day}, Week {week}'
+    })
+
 if __name__ == "__main__":
+    # Initialize files
     initialize_transaction_csv()
+    initialize_blocked_vendors_csv()
+    
+    # Make sure day tracker exists
+    if not os.path.exists("3/day_tracker.txt"):
+        with open("3/day_tracker.txt", "w") as file:
+            file.write("1,1")
+    
     app.run(debug=True)

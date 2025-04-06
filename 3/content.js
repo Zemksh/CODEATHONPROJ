@@ -68,12 +68,13 @@ function createConfirmationModal(vendorUPI, timer, onProceed, onCancel) {
   const proceedButton = document.createElement('button');
   proceedButton.textContent = 'Proceed Anyway';
   proceedButton.style.padding = '10px 15px';
-  proceedButton.style.backgroundColor = '#5cb85c';
+  proceedButton.style.backgroundColor = '#cccccc'; // Start with disabled color
   proceedButton.style.color = 'white';
   proceedButton.style.border = 'none';
   proceedButton.style.borderRadius = '4px';
-  proceedButton.style.cursor = 'pointer';
   proceedButton.style.width = '48%';
+  proceedButton.disabled = true; // Start disabled
+  proceedButton.style.cursor = 'not-allowed';
   
   // Assemble modal
   buttonContainer.appendChild(cancelButton);
@@ -92,12 +93,13 @@ function createConfirmationModal(vendorUPI, timer, onProceed, onCancel) {
   const interval = setInterval(() => {
     countdown--;
     timerDisplay.textContent = `${countdown} seconds`;
+    
+    // Enable the proceed button when timer reaches 0
     if (countdown <= 0) {
+      proceedButton.disabled = false;
+      proceedButton.style.backgroundColor = '#5cb85c'; // Change to green when enabled
+      proceedButton.style.cursor = 'pointer';
       clearInterval(interval);
-      if (document.body.contains(modal)) {
-        document.body.removeChild(modal);
-        onCancel();
-      }
     }
   }, 1000);
   
@@ -111,17 +113,19 @@ function createConfirmationModal(vendorUPI, timer, onProceed, onCancel) {
   });
   
   proceedButton.addEventListener('click', function() {
-    clearInterval(interval);
-    if (document.body.contains(modal)) {
-      document.body.removeChild(modal);
+    if (!proceedButton.disabled) {
+      clearInterval(interval);
+      if (document.body.contains(modal)) {
+        document.body.removeChild(modal);
+      }
+      onProceed();
     }
-    onProceed();
   });
   
   return modal;
 }
 
-// Function to show success notification
+// Function to show success notification - replaced with alert
 function showSuccessNotification(vendorUPI) {
   // Ensure any existing modal is removed first
   const existingModal = document.getElementById('budget-buddy-modal');
@@ -129,37 +133,8 @@ function showSuccessNotification(vendorUPI) {
     document.body.removeChild(existingModal);
   }
   
-  const notification = document.createElement('div');
-  notification.style.position = 'fixed';
-  notification.style.top = '20px';
-  notification.style.right = '20px';
-  notification.style.backgroundColor = '#5cb85c';
-  notification.style.color = 'white';
-  notification.style.padding = '15px';
-  notification.style.borderRadius = '5px';
-  notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-  notification.style.zIndex = '10001';
-  notification.style.minWidth = '250px';
-  notification.style.textAlign = 'center';
-  
-  const title = document.createElement('div');
-  title.style.fontWeight = 'bold';
-  title.style.marginBottom = '5px';
-  title.textContent = 'Payment Processed';
-  
-  const message = document.createElement('div');
-  message.textContent = `Transaction to ${vendorUPI} completed successfully.`;
-  
-  notification.appendChild(title);
-  notification.appendChild(message);
-  document.body.appendChild(notification);
-  
-  // Remove after 3 seconds
-  setTimeout(() => {
-    if (document.body.contains(notification)) {
-      document.body.removeChild(notification);
-    }
-  }, 3000);
+  // Show a simple alert with "payment successful" message
+  alert(`Payment to ${vendorUPI} successful!`);
 }
 
 // Function to check if a vendor is restricted and show modal if needed
