@@ -6,7 +6,7 @@ import re
 
 app = Flask(__name__, static_folder="static")
 
-API_KEY = "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"
+API_KEY = "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"
 MODEL = "mistralai/mistral-7b-instruct:free"
 
 # Extract vendor name if user says "block vendor"
