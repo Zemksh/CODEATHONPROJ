@@ -97,13 +97,24 @@
         .back-link:hover {
             text-decoration: underline;
         }
+        
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Set Your Daily Target</h1>
         <div class="form-card">
-            <form method="POST" action="/">
+            <div id="success-message" class="success-message">Daily goal saved successfully!</div>
+            
+            <form id="dailyGoalForm">
                 <div class="form-group">
                     <label for="target">Enter your daily target:</label>
                     <input type="text" id="target" name="target" required>
@@ -113,5 +124,28 @@
             <a href="/" class="back-link">Back to Home</a>
         </div>
     </div>
+    
+    <script>
+        document.getElementById('dailyGoalForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const goalValue = document.getElementById('target').value;
+            
+            // Store the goal in localStorage
+            localStorage.setItem('dailyGoal', goalValue);
+            
+            // Show success message
+            const successMsg = document.getElementById('success-message');
+            successMsg.style.display = 'block';
+            
+            // Clear form
+            document.getElementById('target').value = '';
+            
+            // Hide success message after 3 seconds
+            setTimeout(function() {
+                successMsg.style.display = 'none';
+            }, 3000);
+        });
+    </script>
 </body>
 </html>
